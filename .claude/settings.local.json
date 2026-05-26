@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-ChildItem C:\\\\Users\\\\13991656\\\\source\\\\repos\\\\TestCRM -Filter \"nuget.config\" -Recurse; Get-ChildItem $env:APPDATA\\\\NuGet -Filter \"NuGet.Config\")"
+    ]
+  }
+}
