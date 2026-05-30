@@ -1,16 +1,14 @@
-using AuthService.Protos;
+using Shared.Protos;
 using Grpc.Net.Client;
 
 namespace TestCRM.Infrastructure.GrpcClients;
 
-/// <summary>
-/// Thin wrapper around the generated gRPC client so it can be injected as a scoped service.
-/// </summary>
 public interface IAuthGrpcClient
 {
-    Task<ValidateTokenResponse> ValidateTokenAsync(string token, CancellationToken ct = default);
-    Task<UserResponse>          GetUserByIdAsync  (int id,      CancellationToken ct = default);
-    Task<UserClaimsResponse>    GetUserClaimsAsync(int userId,  CancellationToken ct = default);
+    Task<ValidateTokenResponse> ValidateTokenAsync  (string token,  CancellationToken ct = default);
+    Task<UserResponse>          GetUserByIdAsync    (int id,        CancellationToken ct = default);
+    Task<UserClaimsResponse>    GetUserClaimsAsync  (int userId,    CancellationToken ct = default);
+    Task<TenantResponse>        GetTenantBySlugAsync(string slug,   CancellationToken ct = default);
 }
 
 public class AuthGrpcClient : IAuthGrpcClient, IDisposable
@@ -35,6 +33,9 @@ public class AuthGrpcClient : IAuthGrpcClient, IDisposable
 
     public async Task<UserClaimsResponse> GetUserClaimsAsync(int userId, CancellationToken ct)
         => await _client.GetUserClaimsAsync(new GetUserClaimsRequest { UserId = userId }, cancellationToken: ct);
+
+    public async Task<TenantResponse> GetTenantBySlugAsync(string slug, CancellationToken ct)
+        => await _client.GetTenantBySlugAsync(new GetTenantBySlugRequest { Slug = slug }, cancellationToken: ct);
 
     public void Dispose() => _channel.Dispose();
 }

@@ -1,4 +1,4 @@
-namespace AuthService.Models;
+namespace Shared.Contracts.Auth;
 
 // ── Requests ───────────────────────────────────────────────────
 public record RegisterRequest(
@@ -15,24 +15,20 @@ public record LoginRequest(
     string Username,
     string Password);
 
-public record RefreshRequest(
-    string RefreshToken);
+public record RefreshRequest(string RefreshToken);
 
-public record AddClaimRequest(
-    string Type,
-    string Value);
+public record AddClaimRequest(string Type, string Value);
 
-public record ReplaceClaimsRequest(
-    List<ClaimItem> Claims);
+public record ReplaceClaimsRequest(List<ClaimItem> Claims);
 
 public record ClaimItem(string Type, string Value);
 
 // ── Responses ──────────────────────────────────────────────────
 public record AuthResponse(
-    string AccessToken,
-    string RefreshToken,
+    string   AccessToken,
+    string   RefreshToken,
     DateTime ExpiresAt,
-    int    UserId,
-    string Username,
-    string Role,
-    string TenantId);
+    int      UserId,
+    string   Username,
+    string   Role,
+    string   TenantId);

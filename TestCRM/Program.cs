@@ -1,10 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
-using TestCRM.Application.Interfaces;
+using Shared.Application.Interfaces;
 using TestCRM.Infrastructure.GrpcClients;
 using TestCRM.Infrastructure.Middleware;
 using TestCRM.Infrastructure.Persistence;
-using TestCRM.Infrastructure.Services;
+using Shared.Infrastructure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 

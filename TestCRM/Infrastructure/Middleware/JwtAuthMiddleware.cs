@@ -5,7 +5,8 @@ namespace TestCRM.Infrastructure.Middleware;
 
 /// <summary>
 /// Validates the Bearer token by calling AuthService over gRPC.
-/// On success it injects a ClaimsPrincipal so standard [Authorize] keeps working.
+/// Injects a ClaimsPrincipal with tenant_id, role, etc., so standard
+/// [Authorize] and the TenantService both work transparently.
 /// </summary>
 public class JwtAuthMiddleware
 {
@@ -23,20 +24,25 @@ public class JwtAuthMiddleware
                 var resp = await authClient.ValidateTokenAsync(token, ctx.RequestAborted);
                 if (resp.IsValid)
                 {
-                    var claims = new[]
+                    var claims = new List<Claim>
                     {
-                        new Claim(ClaimTypes.NameIdentifier, resp.UserId.ToString()),
-                        new Claim(ClaimTypes.Name,           resp.Username),
-                        new Claim(ClaimTypes.Role,           resp.Role),
-                        new Claim("tenant_id",               resp.TenantId)
+                        new(ClaimTypes.NameIdentifier, resp.UserId.ToString()),
+                        new(ClaimTypes.Name,           resp.Username),
+                        new(ClaimTypes.Role,           resp.Role),
+                        new("tenant_id",               resp.TenantId),
+                        new("home_tenant_id",          resp.HomeTenantId),
                     };
+
+                    if (resp.TenantSwitched)
+                        claims.Add(new Claim("tenant_switched", "true"));
+
                     ctx.User = new ClaimsPrincipal(
                         new ClaimsIdentity(claims, "GrpcJwt"));
                 }
             }
             catch
             {
-                // AuthService unreachable – let request continue unauthenticated
+                // AuthService unreachable – pass unauthenticated
             }
         }
         await _next(ctx);

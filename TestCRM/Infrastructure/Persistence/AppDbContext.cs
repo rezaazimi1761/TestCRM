@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
-using TestCRM.Application.Interfaces;
-using TestCRM.Domain.Common;
+using Shared.Application.Interfaces;
+using Shared.Domain.Common;
 using TestCRM.Domain.Entities;
 
 namespace TestCRM.Infrastructure.Persistence;

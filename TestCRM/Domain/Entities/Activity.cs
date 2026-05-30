@@ -1,4 +1,4 @@
-using TestCRM.Domain.Common;
+using Shared.Domain.Common;
 
 namespace TestCRM.Domain.Entities;
 

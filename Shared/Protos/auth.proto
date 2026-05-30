@@ -1,23 +1,26 @@
 syntax = "proto3";
 
-option csharp_namespace = "AuthService.Protos";
+option csharp_namespace = "Shared.Protos";
 
 package auth;
 
 service AuthGrpc {
-  rpc ValidateToken (ValidateTokenRequest) returns (ValidateTokenResponse);
-  rpc GetUserById   (GetUserByIdRequest)   returns (UserResponse);
-  rpc GetUserClaims (GetUserClaimsRequest) returns (UserClaimsResponse);
+  rpc ValidateToken    (ValidateTokenRequest)    returns (ValidateTokenResponse);
+  rpc GetUserById      (GetUserByIdRequest)       returns (UserResponse);
+  rpc GetUserClaims    (GetUserClaimsRequest)     returns (UserClaimsResponse);
+  rpc GetTenantBySlug  (GetTenantBySlugRequest)   returns (TenantResponse);
 }
 
 // ── ValidateToken ──────────────────────────────────────────────
 message ValidateTokenRequest  { string token = 1; }
 message ValidateTokenResponse {
-  bool   is_valid  = 1;
-  int32  user_id   = 2;
-  string username  = 3;
-  string role      = 4;
-  string tenant_id = 5;
+  bool   is_valid        = 1;
+  int32  user_id         = 2;
+  string username        = 3;
+  string role            = 4;
+  string tenant_id       = 5;
+  string home_tenant_id  = 6;
+  bool   tenant_switched = 7;
 }
 
 // ── GetUserById ────────────────────────────────────────────────
@@ -37,3 +40,12 @@ message UserResponse {
 message GetUserClaimsRequest  { int32 user_id = 1; }
 message UserClaimsResponse    { repeated ClaimDto claims = 1; }
 message ClaimDto              { string type = 1; string value = 2; }
+
+// ── GetTenantBySlug ────────────────────────────────────────────
+message GetTenantBySlugRequest { string slug = 1; }
+message TenantResponse {
+  int32  id           = 1;
+  string slug         = 2;
+  string display_name = 3;
+  bool   is_active    = 4;
+}

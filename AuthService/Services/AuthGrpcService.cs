@@ -1,13 +1,14 @@
 using System.Security.Claims;
 using AuthService.Infrastructure.Persistence;
-using AuthService.Protos;
+using Shared.Protos;
 using Grpc.Core;
 using Microsoft.EntityFrameworkCore;
 
 namespace AuthService.Services;
 
 /// <summary>
-/// gRPC service – consumed by the CRM main service to validate tokens and look up users.
+/// gRPC service consumed by CRM and other internal services.
+/// Implements the server-side base class generated in Shared.
 /// </summary>
 public class AuthGrpcService : AuthGrpc.AuthGrpcBase
 {
@@ -28,19 +29,21 @@ public class AuthGrpcService : AuthGrpc.AuthGrpcBase
         if (principal is null)
             return Task.FromResult(new ValidateTokenResponse { IsValid = false });
 
-        var userId   = int.TryParse(principal.FindFirstValue(ClaimTypes.NameIdentifier)
-                       ?? principal.FindFirstValue("sub"), out var id) ? id : 0;
-        var username = principal.FindFirstValue(ClaimTypes.Name) ?? "";
-        var role     = principal.FindFirstValue(ClaimTypes.Role) ?? "";
-        var tenant   = principal.FindFirstValue("tenant_id")     ?? "";
+        var userId = int.TryParse(
+            principal.FindFirstValue(ClaimTypes.NameIdentifier) ?? principal.FindFirstValue("sub"),
+            out var id) ? id : 0;
+
+        var tenantSwitched = principal.FindFirstValue("tenant_switched") == "true";
 
         return Task.FromResult(new ValidateTokenResponse
         {
-            IsValid  = true,
-            UserId   = userId,
-            Username = username,
-            Role     = role,
-            TenantId = tenant
+            IsValid        = true,
+            UserId         = userId,
+            Username       = principal.FindFirstValue(ClaimTypes.Name)     ?? "",
+            Role           = principal.FindFirstValue(ClaimTypes.Role)     ?? "",
+            TenantId       = principal.FindFirstValue("tenant_id")         ?? "",
+            HomeTenantId   = principal.FindFirstValue("home_tenant_id")    ?? "",
+            TenantSwitched = tenantSwitched
         });
     }
 
@@ -77,5 +80,24 @@ public class AuthGrpcService : AuthGrpc.AuthGrpcBase
         var response = new UserClaimsResponse();
         response.Claims.AddRange(claims);
         return response;
+    }
+
+    // ── GetTenantBySlug ────────────────────────────────────────────
+    public override async Task<TenantResponse> GetTenantBySlug(
+        GetTenantBySlugRequest request, ServerCallContext context)
+    {
+        var tenant = await _db.Tenants
+            .FirstOrDefaultAsync(t => t.Slug == request.Slug && !t.IsDeleted);
+
+        if (tenant is null)
+            throw new RpcException(new Status(StatusCode.NotFound, $"Tenant '{request.Slug}' not found"));
+
+        return new TenantResponse
+        {
+            Id          = tenant.Id,
+            Slug        = tenant.Slug,
+            DisplayName = tenant.DisplayName,
+            IsActive    = tenant.IsActive
+        };
     }
 }

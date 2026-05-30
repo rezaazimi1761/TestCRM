@@ -1,5 +1,5 @@
 using MediatR;
-using TestCRM.Application.Interfaces;
+using Shared.Application.Interfaces;
 using TestCRM.Domain.Entities;
 using TestCRM.Infrastructure.Persistence;
 
