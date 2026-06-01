@@ -1,0 +1,36 @@
+@page "/dashboard"
+@attribute [Authorize]
+@inject AuthStateProvider AuthState
+@inject CrmApiClient Crm
+
+<PageTitle>Dashboard — TestCRM</PageTitle>
+
+<MudText Typo="Typo.h4" GutterBottom="true">Dashboard</MudText>
+
+<MudGrid>
+    <MudItem xs="12" md="3"><StatCard Title="Contacts" Icon="@Icons.Material.Filled.Contacts" Color="Color.Primary" Value="@_contacts" /></MudItem>
+    <MudItem xs="12" md="3"><StatCard Title="Accounts" Icon="@Icons.Material.Filled.Business" Color="Color.Info" Value="@_accounts" /></MudItem>
+    <MudItem xs="12" md="3"><StatCard Title="Leads" Icon="@Icons.Material.Filled.PersonAdd" Color="Color.Warning" Value="@_leads" /></MudItem>
+    <MudItem xs="12" md="3"><StatCard Title="Opportunities" Icon="@Icons.Material.Filled.MonetizationOn" Color="Color.Success" Value="@_opps" /></MudItem>
+</MudGrid>
+
+<MudPaper Class="pa-4 mt-6">
+    <MudText Typo="Typo.body2">
+        Connected instance: <b>@_instanceUrl</b>
+    </MudText>
+</MudPaper>
+
+@code {
+    private string _instanceUrl = "";
+    private int _contacts, _accounts, _leads, _opps;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _instanceUrl = await AuthState.GetApiUrlAsync() ?? "(unknown)";
+
+        _contacts = (await Crm.GetListAsync<object>("/api/contacts"))?.Count ?? 0;
+        _accounts = (await Crm.GetListAsync<object>("/api/accounts"))?.Count ?? 0;
+        _leads    = (await Crm.GetListAsync<object>("/api/leads"))?.Count ?? 0;
+        _opps     = (await Crm.GetListAsync<object>("/api/opportunities"))?.Count ?? 0;
+    }
+}

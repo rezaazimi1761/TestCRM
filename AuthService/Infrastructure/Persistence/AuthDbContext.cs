@@ -7,13 +7,26 @@ public class AuthDbContext : DbContext
 {
     public AuthDbContext(DbContextOptions<AuthDbContext> options) : base(options) { }
 
-    public DbSet<Tenant>       Tenants       { get; set; }
-    public DbSet<AppUser>      Users         { get; set; }
-    public DbSet<RefreshToken> RefreshTokens { get; set; }
-    public DbSet<UserClaim>    UserClaims    { get; set; }
+    public DbSet<ServiceInstance> ServiceInstances { get; set; }
+    public DbSet<Tenant>          Tenants          { get; set; }
+    public DbSet<AppUser>         Users            { get; set; }
+    public DbSet<RefreshToken>    RefreshTokens    { get; set; }
+    public DbSet<UserClaim>       UserClaims       { get; set; }
 
     protected override void OnModelCreating(ModelBuilder mb)
     {
+        // ── ServiceInstance ────────────────────────────────────────
+        mb.Entity<ServiceInstance>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).ValueGeneratedNever();   // GUID supplied by caller
+            e.HasIndex(x => x.Name).IsUnique();
+            e.Property(x => x.Name       ).HasMaxLength(200).IsRequired();
+            e.Property(x => x.ApiUrl     ).HasMaxLength(500).IsRequired();
+            e.Property(x => x.Description).HasMaxLength(500);
+            e.HasQueryFilter(x => !x.IsDeleted);
+        });
+
         // ── Tenant ─────────────────────────────────────────────────
         mb.Entity<Tenant>(e =>
         {
@@ -23,7 +36,11 @@ public class AuthDbContext : DbContext
             e.Property(x => x.DisplayName).HasMaxLength(200).IsRequired();
             e.Property(x => x.Description).HasMaxLength(500);
 
-            // Soft-delete filter
+            e.HasOne(x => x.ServiceInstance)
+             .WithMany(s => s.Tenants)
+             .HasForeignKey(x => x.ServiceInstanceId)
+             .OnDelete(DeleteBehavior.Restrict);
+
             e.HasQueryFilter(x => !x.IsDeleted);
         });
 
@@ -38,7 +55,6 @@ public class AuthDbContext : DbContext
             e.Property(x => x.Email   ).HasMaxLength(200).IsRequired();
             e.Property(x => x.Role    ).HasMaxLength(50 ).IsRequired();
 
-            // FK  AppUser.TenantId → Tenant.Slug
             e.HasOne(x => x.Tenant)
              .WithMany(t => t.Users)
              .HasForeignKey(x => x.TenantId)
@@ -46,7 +62,6 @@ public class AuthDbContext : DbContext
              .IsRequired(false)
              .OnDelete(DeleteBehavior.Restrict);
 
-            // Soft-delete filter
             e.HasQueryFilter(x => !x.IsDeleted);
         });
 

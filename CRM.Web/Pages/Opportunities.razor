@@ -1,0 +1,117 @@
+﻿@page "/opportunities"
+@attribute [Authorize]
+@inject CrmApiClient Crm
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>Opportunities</PageTitle>
+
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4">
+    <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Size="Size.Large" Color="Color.Primary" />
+    <MudText Typo="Typo.h4">Opportunities</MudText>
+    <MudSpacer />
+    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+               StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => OpenDialogAsync(null))">
+        New Opportunity
+    </MudButton>
+    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Refresh"
+               OnClick="Refresh" Class="ml-2">Refresh</MudButton>
+</MudStack>
+
+<MudTable Items="_items" Hover="true" Striped="true" Dense="true" Loading="_loading">
+    <HeaderContent>
+        <MudTh>Title</MudTh>
+        <MudTh>Value</MudTh>
+        <MudTh>Stage</MudTh>
+        <MudTh>Close Date</MudTh>
+        <MudTh>Actions</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd><b>@context.Title</b></MudTd>
+        <MudTd>@context.Value.ToString("C")</MudTd>
+        <MudTd><MudChip Size="Size.Small" Color="Color.Success">@context.Stage</MudChip></MudTd>
+        <MudTd>@context.ExpectedCloseDate?.ToString("yyyy-MM-dd")</MudTd>
+        <MudTd>
+            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small"
+                           OnClick="@(() => OpenDialogAsync(context))" />
+            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
+                           OnClick="@(() => DeleteAsync(context.Id))" />
+        </MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    private List<Opportunity> _items = new();
+    private bool _loading;
+
+    public class Opportunity
+    {
+        public int       Id                { get; set; }
+        public string?   Title             { get; set; }
+        public decimal   Value             { get; set; }
+        public string?   Stage             { get; set; }
+        public DateTime? ExpectedCloseDate { get; set; }
+        public string?   Notes             { get; set; }
+    }
+
+    protected override Task OnInitializedAsync() => Refresh();
+
+    private async Task Refresh()
+    {
+        _loading = true;
+        try { _items = await Crm.GetListAsync<Opportunity>("/api/opportunities") ?? new(); }
+        catch (Exception ex) { Snackbar.Add($"Load failed: {ex.Message}", Severity.Error); }
+        finally { _loading = false; }
+    }
+
+    private async Task OpenDialogAsync(Opportunity? existing)
+    {
+        var model = existing is null ? null : new OpportunityDialog.Model
+        {
+            Id                = existing.Id,
+            Title             = existing.Title ?? "",
+            Value             = existing.Value,
+            Stage             = existing.Stage ?? "Prospecting",
+            ExpectedCloseDate = existing.ExpectedCloseDate,
+            Notes             = existing.Notes
+        };
+
+        var parameters = new DialogParameters { ["Existing"] = model };
+        var dlg = await DialogService.ShowAsync<OpportunityDialog>(existing is null ? "New Opportunity" : "Edit Opportunity", parameters);
+        var res = await dlg.Result;
+        if (res is null || res.Canceled) return;
+
+        var req = (OpportunityDialog.Model)res.Data!;
+        HttpResponseMessage r;
+        if (req.Id == 0)
+            r = await Crm.PostAsync("/api/opportunities", new
+            {
+                title = req.Title, value = req.Value, stage = req.Stage,
+                expectedCloseDate = req.ExpectedCloseDate, notes = req.Notes
+            });
+        else
+            r = await Crm.PutAsync($"/api/opportunities/{req.Id}", new
+            {
+                id = req.Id,
+                title = req.Title, value = req.Value, stage = req.Stage,
+                expectedCloseDate = req.ExpectedCloseDate, notes = req.Notes
+            });
+
+        Snackbar.Add(r.IsSuccessStatusCode
+            ? (req.Id == 0 ? "Opportunity created" : "Opportunity updated")
+            : $"Failed: {await r.Content.ReadAsStringAsync()}",
+            r.IsSuccessStatusCode ? Severity.Success : Severity.Error);
+        if (r.IsSuccessStatusCode) await Refresh();
+    }
+
+    private async Task DeleteAsync(int id)
+    {
+        var ok = await DialogService.ShowMessageBox("Delete opportunity?", "This action cannot be undone.",
+                                                    yesText: "Delete", cancelText: "Cancel");
+        if (ok != true) return;
+        var r = await Crm.DeleteAsync($"/api/opportunities/{id}");
+        Snackbar.Add(r.IsSuccessStatusCode ? "Deleted" : "Failed",
+                     r.IsSuccessStatusCode ? Severity.Success : Severity.Error);
+        await Refresh();
+    }
+}

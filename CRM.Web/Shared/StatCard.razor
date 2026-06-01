@@ -1,0 +1,16 @@
+@namespace CRM.Web.Shared
+
+<MudPaper Class="pa-4 d-flex align-center" Elevation="2">
+    <MudIcon Icon="@Icon" Color="@Color" Size="Size.Large" Class="mr-4" />
+    <MudStack Spacing="0">
+        <MudText Typo="Typo.caption">@Title</MudText>
+        <MudText Typo="Typo.h5">@Value</MudText>
+    </MudStack>
+</MudPaper>
+
+@code {
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public string Icon  { get; set; } = "";
+    [Parameter] public Color  Color { get; set; } = Color.Default;
+    [Parameter] public int    Value { get; set; }
+}

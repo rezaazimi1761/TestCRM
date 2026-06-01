@@ -140,12 +140,18 @@ public class AuthController : ControllerBase
         await _db.SaveChangesAsync(ct);
 
         var accessMinutes = int.Parse(_cfg["Jwt:AccessTokenMinutes"] ?? "60");
+        var targetInstance = await _db.ServiceInstances
+            .FirstOrDefaultAsync(s => s.Id == targetTenant.ServiceInstanceId && s.IsActive, ct);
+        if (targetInstance is null)
+            return StatusCode(503, $"Tenant '{targetTenant.Slug}' has no active service instance.");
+
         return Ok(new SwitchTenantResponse(
             AccessToken:      accessToken,
             RefreshToken:     refreshToken,
             ExpiresAt:        DateTime.UtcNow.AddMinutes(accessMinutes),
             ActiveTenantSlug: targetTenant.Slug,
-            ActiveTenantName: targetTenant.DisplayName));
+            ActiveTenantName: targetTenant.DisplayName,
+            ApiUrl:           targetInstance.ApiUrl));
     }
 
     // ── Private ────────────────────────────────────────────────────
@@ -164,14 +170,28 @@ public class AuthController : ControllerBase
         });
         await _db.SaveChangesAsync(ct);
 
+        var activeTenantSlug = tenantOverride ?? user.TenantId;
+
+        // Look up the tenant → service instance → API URL
+        var tenant = await _db.Tenants
+            .Include(t => t.ServiceInstance)
+            .FirstOrDefaultAsync(t => t.Slug == activeTenantSlug, ct);
+
+        var instance = tenant?.ServiceInstance;
+        if (instance is null || !instance.IsActive)
+            throw new InvalidOperationException(
+                $"Tenant '{activeTenantSlug}' is not assigned to an active service instance.");
+
         var accessMinutes = int.Parse(_cfg["Jwt:AccessTokenMinutes"] ?? "60");
         return new AuthResponse(
-            AccessToken:  accessToken,
-            RefreshToken: refreshToken,
-            ExpiresAt:    DateTime.UtcNow.AddMinutes(accessMinutes),
-            UserId:       user.Id,
-            Username:     user.Username,
-            Role:         user.Role,
-            TenantId:     tenantOverride ?? user.TenantId);
+            AccessToken:       accessToken,
+            RefreshToken:      refreshToken,
+            ExpiresAt:         DateTime.UtcNow.AddMinutes(accessMinutes),
+            UserId:            user.Id,
+            Username:          user.Username,
+            Role:              user.Role,
+            TenantId:          activeTenantSlug,
+            ServiceInstanceId: instance.Id,
+            ApiUrl:            instance.ApiUrl);
     }
 }

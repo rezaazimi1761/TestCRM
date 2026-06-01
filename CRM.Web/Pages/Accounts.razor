@@ -1,0 +1,119 @@
+﻿@page "/accounts"
+@attribute [Authorize]
+@inject CrmApiClient Crm
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>Accounts</PageTitle>
+
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4">
+    <MudIcon Icon="@Icons.Material.Filled.Business" Size="Size.Large" Color="Color.Primary" />
+    <MudText Typo="Typo.h4">Accounts</MudText>
+    <MudSpacer />
+    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+               StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => OpenDialogAsync(null))">
+        New Account
+    </MudButton>
+    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Refresh"
+               OnClick="Refresh" Class="ml-2">Refresh</MudButton>
+</MudStack>
+
+<MudTable Items="_items" Hover="true" Striped="true" Dense="true" Loading="_loading">
+    <HeaderContent>
+        <MudTh>Name</MudTh>
+        <MudTh>Industry</MudTh>
+        <MudTh>Website</MudTh>
+        <MudTh>Phone</MudTh>
+        <MudTh>Actions</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd><b>@context.Name</b></MudTd>
+        <MudTd>@context.Industry</MudTd>
+        <MudTd>@context.Website</MudTd>
+        <MudTd>@context.Phone</MudTd>
+        <MudTd>
+            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small"
+                           OnClick="@(() => OpenDialogAsync(context))" />
+            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
+                           OnClick="@(() => DeleteAsync(context.Id))" />
+        </MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    private List<Account> _items = new();
+    private bool _loading;
+
+    public class Account
+    {
+        public int     Id       { get; set; }
+        public string? Name     { get; set; }
+        public string? Industry { get; set; }
+        public string? Website  { get; set; }
+        public string? Phone    { get; set; }
+        public string? Address  { get; set; }
+        public string? Notes    { get; set; }
+    }
+
+    protected override Task OnInitializedAsync() => Refresh();
+
+    private async Task Refresh()
+    {
+        _loading = true;
+        try { _items = await Crm.GetListAsync<Account>("/api/accounts") ?? new(); }
+        catch (Exception ex) { Snackbar.Add($"Load failed: {ex.Message}", Severity.Error); }
+        finally { _loading = false; }
+    }
+
+    private async Task OpenDialogAsync(Account? existing)
+    {
+        var model = existing is null ? null : new AccountDialog.Model
+        {
+            Id       = existing.Id,
+            Name     = existing.Name ?? "",
+            Industry = existing.Industry,
+            Website  = existing.Website,
+            Phone    = existing.Phone,
+            Address  = existing.Address,
+            Notes    = existing.Notes
+        };
+
+        var parameters = new DialogParameters { ["Existing"] = model };
+        var dlg = await DialogService.ShowAsync<AccountDialog>(existing is null ? "New Account" : "Edit Account", parameters);
+        var res = await dlg.Result;
+        if (res is null || res.Canceled) return;
+
+        var req = (AccountDialog.Model)res.Data!;
+        HttpResponseMessage r;
+        if (req.Id == 0)
+            r = await Crm.PostAsync("/api/accounts", new
+            {
+                name = req.Name, industry = req.Industry, website = req.Website,
+                phone = req.Phone, address = req.Address, notes = req.Notes
+            });
+        else
+            r = await Crm.PutAsync($"/api/accounts/{req.Id}", new
+            {
+                id = req.Id,
+                name = req.Name, industry = req.Industry, website = req.Website,
+                phone = req.Phone, address = req.Address, notes = req.Notes
+            });
+
+        Snackbar.Add(r.IsSuccessStatusCode
+            ? (req.Id == 0 ? "Account created" : "Account updated")
+            : $"Failed: {await r.Content.ReadAsStringAsync()}",
+            r.IsSuccessStatusCode ? Severity.Success : Severity.Error);
+        if (r.IsSuccessStatusCode) await Refresh();
+    }
+
+    private async Task DeleteAsync(int id)
+    {
+        var ok = await DialogService.ShowMessageBox("Delete account?", "This action cannot be undone.",
+                                                    yesText: "Delete", cancelText: "Cancel");
+        if (ok != true) return;
+        var r = await Crm.DeleteAsync($"/api/accounts/{id}");
+        Snackbar.Add(r.IsSuccessStatusCode ? "Deleted" : "Failed",
+                     r.IsSuccessStatusCode ? Severity.Success : Severity.Error);
+        await Refresh();
+    }
+}

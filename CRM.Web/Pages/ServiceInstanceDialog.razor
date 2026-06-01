@@ -1,0 +1,72 @@
+@namespace CRM.Web.Pages
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="_form" @bind-IsValid="_isValid">
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_model.Name" Label="Name"
+                                  Variant="Variant.Outlined" Required="true" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_model.ApiUrl" Label="API URL"
+                                  Variant="Variant.Outlined" Required="true"
+                                  HelperText="e.g. https://crm.example.com" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_model.Description" Label="Description"
+                                  Variant="Variant.Outlined" Lines="2" />
+                </MudItem>
+                @if (_model.Id != Guid.Empty)
+                {
+                    <MudItem xs="12" Class="d-flex align-center">
+                        <MudCheckBox @bind-Value="_model.IsActive" Label="Active" Color="Color.Primary" />
+                    </MudItem>
+                }
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled"
+                   Disabled="!_isValid" OnClick="Submit">@_submitLabel</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private MudDialogInstance Dialog { get; set; } = default!;
+    [Parameter] public Model? Existing { get; set; }
+
+    private MudForm? _form;
+    private bool _isValid;
+    private Model _model = new();
+    private string _submitLabel = "Create";
+
+    public class Model
+    {
+        public Guid    Id          { get; set; }
+        public string  Name        { get; set; } = "";
+        public string  ApiUrl      { get; set; } = "";
+        public string? Description { get; set; }
+        public bool    IsActive    { get; set; } = true;
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (Existing is not null)
+        {
+            _model = new Model
+            {
+                Id          = Existing.Id,
+                Name        = Existing.Name,
+                ApiUrl      = Existing.ApiUrl,
+                Description = Existing.Description,
+                IsActive    = Existing.IsActive
+            };
+            _submitLabel = "Save";
+        }
+    }
+
+    private void Submit() => Dialog.Close(DialogResult.Ok(_model));
+    private void Cancel() => Dialog.Cancel();
+}

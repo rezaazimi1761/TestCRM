@@ -5,6 +5,7 @@ using TestCRM.Infrastructure.GrpcClients;
 using TestCRM.Infrastructure.Middleware;
 using TestCRM.Infrastructure.Persistence;
 using Shared.Infrastructure.Services;
+using TestCRM.Infrastructure.ServiceInstance;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -50,6 +51,10 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 builder.Services.AddAuthorization();
+
+// ── Self-register this CRM instance with AuthService on first boot ─
+builder.Services.AddHttpClient();
+builder.Services.AddHostedService<ServiceInstanceBootstrapper>();
 
 var app = builder.Build();
 

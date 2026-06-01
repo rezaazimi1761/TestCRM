@@ -1,0 +1,117 @@
+﻿@page "/service-instances"
+@attribute [Authorize(Roles = "SuperUser")]
+@inject AuthAdminClient Api
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>Service Instances</PageTitle>
+
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4">
+    <MudIcon Icon="@Icons.Material.Filled.Dns" Size="Size.Large" Color="Color.Primary" />
+    <MudText Typo="Typo.h4">Service Instances</MudText>
+    <MudSpacer />
+    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+               StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => OpenDialogAsync(null))">
+        New Instance
+    </MudButton>
+    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Refresh"
+               OnClick="Refresh" Class="ml-2">Refresh</MudButton>
+</MudStack>
+
+<MudTable Items="_items" Hover="true" Striped="true" Dense="true" Loading="_loading">
+    <HeaderContent>
+        <MudTh>ID</MudTh>
+        <MudTh>Name</MudTh>
+        <MudTh>API URL</MudTh>
+        <MudTh>Tenants</MudTh>
+        <MudTh>Active</MudTh>
+        <MudTh>Created</MudTh>
+        <MudTh>Actions</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd><MudText Typo="Typo.caption">@context.Id.ToString().Substring(0,8)…</MudText></MudTd>
+        <MudTd>@context.Name</MudTd>
+        <MudTd><code>@context.ApiUrl</code></MudTd>
+        <MudTd><MudChip Color="Color.Info" Size="Size.Small">@context.TenantCount</MudChip></MudTd>
+        <MudTd>
+            <MudIcon Icon="@(context.IsActive ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Cancel)"
+                     Color="@(context.IsActive ? Color.Success : Color.Error)" />
+        </MudTd>
+        <MudTd>@context.CreatedAt.ToString("yyyy-MM-dd")</MudTd>
+        <MudTd>
+            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small"
+                           OnClick="@(() => OpenDialogAsync(context))" />
+            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
+                           OnClick="@(() => DeleteAsync(context.Id))" />
+        </MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    private List<ServiceInstanceDto> _items = new();
+    private bool _loading;
+
+    public class ServiceInstanceDto
+    {
+        public Guid     Id          { get; set; }
+        public string   Name        { get; set; } = "";
+        public string   ApiUrl      { get; set; } = "";
+        public string?  Description { get; set; }
+        public bool     IsActive    { get; set; }
+        public DateTime CreatedAt   { get; set; }
+        public int      TenantCount { get; set; }
+    }
+
+    protected override Task OnInitializedAsync() => Refresh();
+
+    private async Task Refresh()
+    {
+        _loading = true;
+        try { _items = await Api.GetListAsync<ServiceInstanceDto>("/api/service-instances") ?? new(); }
+        catch (Exception ex) { Snackbar.Add($"Load failed: {ex.Message}", Severity.Error); }
+        finally { _loading = false; }
+    }
+
+    private async Task OpenDialogAsync(ServiceInstanceDto? existing)
+    {
+        var model = existing is null ? null : new ServiceInstanceDialog.Model
+        {
+            Id          = existing.Id,
+            Name        = existing.Name,
+            ApiUrl      = existing.ApiUrl,
+            Description = existing.Description,
+            IsActive    = existing.IsActive
+        };
+
+        var parameters = new DialogParameters { ["Existing"] = model };
+        var title = existing is null ? "New Service Instance" : "Edit Service Instance";
+        var dlg = await DialogService.ShowAsync<ServiceInstanceDialog>(title, parameters);
+        var res = await dlg.Result;
+        if (res is null || res.Canceled) return;
+
+        var req = (ServiceInstanceDialog.Model)res.Data!;
+        HttpResponseMessage r;
+        if (req.Id == Guid.Empty)
+            r = await Api.PostAsync("/api/service-instances", new { req.Name, req.ApiUrl, req.Description });
+        else
+            r = await Api.PutAsync($"/api/service-instances/{req.Id}", new { req.Name, req.ApiUrl, req.Description, req.IsActive });
+
+        Snackbar.Add(r.IsSuccessStatusCode ? (req.Id == Guid.Empty ? "Instance created" : "Instance updated") : $"Failed: {await r.Content.ReadAsStringAsync()}",
+                     r.IsSuccessStatusCode ? Severity.Success : Severity.Error);
+        if (r.IsSuccessStatusCode) await Refresh();
+    }
+
+    private async Task DeleteAsync(Guid id)
+    {
+        var confirmed = await DialogService.ShowMessageBox(
+            "Delete instance?",
+            "Are you sure? Instances with attached tenants cannot be deleted.",
+            yesText: "Delete", cancelText: "Cancel");
+        if (confirmed != true) return;
+
+        var r = await Api.DeleteAsync($"/api/service-instances/{id}");
+        if (r.IsSuccessStatusCode) Snackbar.Add("Deleted", Severity.Success);
+        else Snackbar.Add($"Failed: {await r.Content.ReadAsStringAsync()}", Severity.Error);
+        await Refresh();
+    }
+}

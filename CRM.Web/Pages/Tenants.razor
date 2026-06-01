@@ -1,0 +1,164 @@
+﻿@page "/tenants"
+@attribute [Authorize(Roles = "SuperUser")]
+@inject AuthAdminClient Api
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>Tenants</PageTitle>
+
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4">
+    <MudIcon Icon="@Icons.Material.Filled.Domain" Size="Size.Large" Color="Color.Primary" />
+    <MudText Typo="Typo.h4">Tenants</MudText>
+    <MudSpacer />
+    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+               StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => OpenDialogAsync(null))">
+        New Tenant
+    </MudButton>
+    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Refresh"
+               OnClick="Refresh" Class="ml-2">Refresh</MudButton>
+</MudStack>
+
+<MudTable Items="_items" Hover="true" Striped="true" Dense="true" Loading="_loading">
+    <HeaderContent>
+        <MudTh>Slug</MudTh>
+        <MudTh>Display Name</MudTh>
+        <MudTh>Users</MudTh>
+        <MudTh>Service Instance</MudTh>
+        <MudTh>API URL</MudTh>
+        <MudTh>Active</MudTh>
+        <MudTh>Created</MudTh>
+        <MudTh>Actions</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd><b>@context.Slug</b></MudTd>
+        <MudTd>@context.DisplayName</MudTd>
+        <MudTd><MudChip Color="Color.Info" Size="Size.Small">@context.UserCount</MudChip></MudTd>
+        <MudTd>@context.ServiceInstanceName</MudTd>
+        <MudTd><code>@context.ServiceInstanceApiUrl</code></MudTd>
+        <MudTd>
+            <MudIcon Icon="@(context.IsActive ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Cancel)"
+                     Color="@(context.IsActive ? Color.Success : Color.Error)" />
+        </MudTd>
+        <MudTd>@context.CreatedAt.ToString("yyyy-MM-dd")</MudTd>
+        <MudTd>
+            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small"
+                           OnClick="@(() => OpenDialogAsync(context))" />
+            <MudIconButton Icon="@(context.IsActive ? Icons.Material.Filled.ToggleOn : Icons.Material.Filled.ToggleOff)"
+                           Color="@(context.IsActive ? Color.Success : Color.Default)"
+                           Size="Size.Small"
+                           OnClick="@(() => ToggleAsync(context))" />
+            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
+                           OnClick="@(() => DeleteAsync(context.Slug))" />
+        </MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    private List<TenantDto> _items = new();
+    private List<ServiceInstanceDto> _instances = new();
+    private bool _loading;
+
+    public class TenantDto
+    {
+        public int      Id                    { get; set; }
+        public string   Slug                  { get; set; } = "";
+        public string   DisplayName           { get; set; } = "";
+        public string?  Description           { get; set; }
+        public bool     IsActive              { get; set; }
+        public DateTime CreatedAt             { get; set; }
+        public int      UserCount             { get; set; }
+        public Guid     ServiceInstanceId     { get; set; }
+        public string?  ServiceInstanceName   { get; set; }
+        public string?  ServiceInstanceApiUrl { get; set; }
+    }
+
+    public class ServiceInstanceDto
+    {
+        public Guid   Id       { get; set; }
+        public string Name     { get; set; } = "";
+        public string ApiUrl   { get; set; } = "";
+        public bool   IsActive { get; set; }
+    }
+
+    protected override Task OnInitializedAsync() => Refresh();
+
+    private async Task Refresh()
+    {
+        _loading = true;
+        try
+        {
+            _items     = await Api.GetListAsync<TenantDto>("/api/tenants") ?? new();
+            _instances = await Api.GetListAsync<ServiceInstanceDto>("/api/service-instances") ?? new();
+        }
+        catch (Exception ex) { Snackbar.Add($"Load failed: {ex.Message}", Severity.Error); }
+        finally { _loading = false; }
+    }
+
+    private async Task OpenDialogAsync(TenantDto? existing)
+    {
+        var model = existing is null ? null : new CreateTenantDialog.Model
+        {
+            Id                = existing.Id,
+            Slug              = existing.Slug,
+            DisplayName       = existing.DisplayName,
+            ServiceInstanceId = existing.ServiceInstanceId,
+            Description       = existing.Description,
+            IsActive          = existing.IsActive
+        };
+
+        var parameters = new DialogParameters
+        {
+            ["Instances"] = _instances.Where(i => i.IsActive || existing is not null).ToList(),
+            ["Existing"]  = model
+        };
+        var title = existing is null ? "New Tenant" : "Edit Tenant";
+        var dlg = await DialogService.ShowAsync<CreateTenantDialog>(title, parameters);
+        var res = await dlg.Result;
+        if (res is null || res.Canceled) return;
+
+        var req = (CreateTenantDialog.Model)res.Data!;
+        HttpResponseMessage r;
+        if (req.Id == 0)
+            r = await Api.PostAsync("/api/tenants", new
+            {
+                slug              = req.Slug,
+                displayName       = req.DisplayName,
+                serviceInstanceId = req.ServiceInstanceId,
+                description       = req.Description
+            });
+        else
+            r = await Api.PutAsync($"/api/tenants/{req.Slug}", new
+            {
+                displayName       = req.DisplayName,
+                serviceInstanceId = req.ServiceInstanceId,
+                description       = req.Description,
+                isActive          = req.IsActive
+            });
+
+        Snackbar.Add(r.IsSuccessStatusCode ? (req.Id == 0 ? "Tenant created" : "Tenant updated") : $"Failed: {await r.Content.ReadAsStringAsync()}",
+                     r.IsSuccessStatusCode ? Severity.Success : Severity.Error);
+        if (r.IsSuccessStatusCode) await Refresh();
+    }
+
+    private async Task ToggleAsync(TenantDto t)
+    {
+        var action = t.IsActive ? "deactivate" : "activate";
+        var r = await Api.PostAsync<object?>($"/api/tenants/{t.Slug}/{action}", null);
+        Snackbar.Add(r.IsSuccessStatusCode ? "Updated" : "Failed",
+                     r.IsSuccessStatusCode ? Severity.Success : Severity.Error);
+        await Refresh();
+    }
+
+    private async Task DeleteAsync(string slug)
+    {
+        var ok = await DialogService.ShowMessageBox(
+            "Delete tenant?", $"This will also soft-delete all users in '{slug}'.",
+            yesText: "Delete", cancelText: "Cancel");
+        if (ok != true) return;
+
+        var r = await Api.DeleteAsync($"/api/tenants/{slug}");
+        Snackbar.Add(r.IsSuccessStatusCode ? "Deleted" : "Failed",
+                     r.IsSuccessStatusCode ? Severity.Success : Severity.Error);
+        await Refresh();
+    }
+}

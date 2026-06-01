@@ -1,0 +1,124 @@
+﻿@page "/leads"
+@attribute [Authorize]
+@inject CrmApiClient Crm
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>Leads</PageTitle>
+
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4">
+    <MudIcon Icon="@Icons.Material.Filled.PersonSearch" Size="Size.Large" Color="Color.Primary" />
+    <MudText Typo="Typo.h4">Leads</MudText>
+    <MudSpacer />
+    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+               StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => OpenDialogAsync(null))">
+        New Lead
+    </MudButton>
+    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Refresh"
+               OnClick="Refresh" Class="ml-2">Refresh</MudButton>
+</MudStack>
+
+<MudTable Items="_items" Hover="true" Striped="true" Dense="true" Loading="_loading">
+    <HeaderContent>
+        <MudTh>Name</MudTh>
+        <MudTh>Email</MudTh>
+        <MudTh>Company</MudTh>
+        <MudTh>Status</MudTh>
+        <MudTh>Actions</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.FirstName @context.LastName</MudTd>
+        <MudTd>@context.Email</MudTd>
+        <MudTd>@context.Company</MudTd>
+        <MudTd><MudChip Size="Size.Small" Color="Color.Info">@context.Status</MudChip></MudTd>
+        <MudTd>
+            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small"
+                           OnClick="@(() => OpenDialogAsync(context))" />
+            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
+                           OnClick="@(() => DeleteAsync(context.Id))" />
+        </MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    private List<Lead> _items = new();
+    private bool _loading;
+
+    public class Lead
+    {
+        public int     Id        { get; set; }
+        public string? FirstName { get; set; }
+        public string? LastName  { get; set; }
+        public string? Email     { get; set; }
+        public string? Phone     { get; set; }
+        public string? Company   { get; set; }
+        public string? Status    { get; set; }
+        public string? Source    { get; set; }
+        public string? Notes     { get; set; }
+    }
+
+    protected override Task OnInitializedAsync() => Refresh();
+
+    private async Task Refresh()
+    {
+        _loading = true;
+        try { _items = await Crm.GetListAsync<Lead>("/api/leads") ?? new(); }
+        catch (Exception ex) { Snackbar.Add($"Load failed: {ex.Message}", Severity.Error); }
+        finally { _loading = false; }
+    }
+
+    private async Task OpenDialogAsync(Lead? existing)
+    {
+        var model = existing is null ? null : new LeadDialog.Model
+        {
+            Id        = existing.Id,
+            FirstName = existing.FirstName ?? "",
+            LastName  = existing.LastName  ?? "",
+            Email     = existing.Email     ?? "",
+            Phone     = existing.Phone,
+            Company   = existing.Company,
+            Status    = existing.Status ?? "New",
+            Source    = existing.Source,
+            Notes     = existing.Notes
+        };
+
+        var parameters = new DialogParameters { ["Existing"] = model };
+        var dlg = await DialogService.ShowAsync<LeadDialog>(existing is null ? "New Lead" : "Edit Lead", parameters);
+        var res = await dlg.Result;
+        if (res is null || res.Canceled) return;
+
+        var req = (LeadDialog.Model)res.Data!;
+        HttpResponseMessage r;
+        if (req.Id == 0)
+            r = await Crm.PostAsync("/api/leads", new
+            {
+                firstName = req.FirstName, lastName = req.LastName, email = req.Email,
+                phone = req.Phone, company = req.Company, source = req.Source, notes = req.Notes
+            });
+        else
+            r = await Crm.PutAsync($"/api/leads/{req.Id}", new
+            {
+                id = req.Id,
+                firstName = req.FirstName, lastName = req.LastName, email = req.Email,
+                phone = req.Phone, company = req.Company, status = req.Status,
+                source = req.Source, notes = req.Notes
+            });
+
+        Snackbar.Add(r.IsSuccessStatusCode
+            ? (req.Id == 0 ? "Lead created" : "Lead updated")
+            : $"Failed: {await r.Content.ReadAsStringAsync()}",
+            r.IsSuccessStatusCode ? Severity.Success : Severity.Error);
+        if (r.IsSuccessStatusCode) await Refresh();
+    }
+
+    private async Task DeleteAsync(int id)
+    {
+        var ok = await DialogService.ShowMessageBox("Delete lead?", "This action cannot be undone.",
+                                                    yesText: "Delete", cancelText: "Cancel");
+        if (ok != true) return;
+        var r = await Crm.DeleteAsync($"/api/leads/{id}");
+        Snackbar.Add(r.IsSuccessStatusCode ? "Deleted" : "Failed",
+                     r.IsSuccessStatusCode ? Severity.Success : Severity.Error);
+        await Refresh();
+    }
+}

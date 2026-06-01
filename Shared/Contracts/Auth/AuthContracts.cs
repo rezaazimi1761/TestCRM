@@ -31,4 +31,6 @@ public record AuthResponse(
     int      UserId,
     string   Username,
     string   Role,
-    string   TenantId);
+    string   TenantId,
+    Guid     ServiceInstanceId,
+    string   ApiUrl);

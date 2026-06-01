@@ -1,0 +1,86 @@
+@namespace CRM.Web.Pages
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="_form" @bind-IsValid="_isValid">
+            <MudGrid>
+                <MudItem xs="6">
+                    <MudTextField @bind-Value="_model.FirstName" Label="First Name"
+                                  Variant="Variant.Outlined" Required="true" />
+                </MudItem>
+                <MudItem xs="6">
+                    <MudTextField @bind-Value="_model.LastName" Label="Last Name"
+                                  Variant="Variant.Outlined" Required="true" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_model.Email" Label="Email"
+                                  Variant="Variant.Outlined" InputType="InputType.Email" Required="true" />
+                </MudItem>
+                @if (_model.Id == 0)
+                {
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="_model.Password" Label="Password"
+                                      Variant="Variant.Outlined" InputType="InputType.Password" Required="true" />
+                    </MudItem>
+                }
+                <MudItem xs="6">
+                    <MudSelect T="string" @bind-Value="_model.Role" Label="Role"
+                               Variant="Variant.Outlined">
+                        <MudSelectItem Value="@("User")">User</MudSelectItem>
+                        <MudSelectItem Value="@("Admin")">Admin</MudSelectItem>
+                        <MudSelectItem Value="@("SuperUser")">SuperUser</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="6" Class="d-flex align-center">
+                    <MudCheckBox @bind-Value="_model.IsActive" Label="Active" Color="Color.Primary" />
+                </MudItem>
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled"
+                   Disabled="!_isValid" OnClick="Submit">@_submitLabel</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private MudDialogInstance Dialog { get; set; } = default!;
+    [Parameter] public Model? Existing { get; set; }
+
+    private MudForm? _form;
+    private bool _isValid;
+    private Model _model = new();
+    private string _submitLabel = "Create";
+
+    public class Model
+    {
+        public int     Id        { get; set; }
+        public string  FirstName { get; set; } = "";
+        public string  LastName  { get; set; } = "";
+        public string  Email     { get; set; } = "";
+        public string? Password  { get; set; }
+        public string? Role      { get; set; } = "User";
+        public bool    IsActive  { get; set; } = true;
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (Existing is not null)
+        {
+            _model = new Model
+            {
+                Id        = Existing.Id,
+                FirstName = Existing.FirstName,
+                LastName  = Existing.LastName,
+                Email     = Existing.Email,
+                Role      = Existing.Role,
+                IsActive  = Existing.IsActive
+            };
+            _submitLabel = "Save";
+        }
+    }
+
+    private void Submit() => Dialog.Close(DialogResult.Ok(_model));
+    private void Cancel() => Dialog.Cancel();
+}

@@ -15,47 +15,49 @@ public class TenantsController : ControllerBase
     private readonly AuthDbContext _db;
     public TenantsController(AuthDbContext db) => _db = db;
 
-    // GET /api/tenants
+    // ── GET /api/tenants ─────────────────────────────────────────────
     [HttpGet]
     public async Task<IActionResult> GetAll(CancellationToken ct)
     {
         var isSuperUser = User.IsInRole("SuperUser");
-        var query = isSuperUser
-            ? _db.Tenants.IgnoreQueryFilters()
-            : _db.Tenants.AsQueryable();
+        var query = isSuperUser ? _db.Tenants.IgnoreQueryFilters() : _db.Tenants.AsQueryable();
 
         var tenants = await query
             .Where(t => !t.IsDeleted)
             .Select(t => new TenantDto(
                 t.Id, t.Slug, t.DisplayName, t.Description,
                 t.IsActive, t.CreatedAt,
-                t.Users.Count(u => !u.IsDeleted)))
+                t.Users.Count(u => !u.IsDeleted),
+                t.ServiceInstanceId,
+                t.ServiceInstance!.Name,
+                t.ServiceInstance!.ApiUrl))
             .ToListAsync(ct);
 
         return Ok(tenants);
     }
 
-    // GET /api/tenants/{slug}
+    // ── GET /api/tenants/{slug} ──────────────────────────────────────
     [HttpGet("{slug}")]
     public async Task<IActionResult> GetBySlug(string slug, CancellationToken ct)
     {
         var isSuperUser = User.IsInRole("SuperUser");
-        var query = isSuperUser
-            ? _db.Tenants.IgnoreQueryFilters()
-            : _db.Tenants.AsQueryable();
+        var query = isSuperUser ? _db.Tenants.IgnoreQueryFilters() : _db.Tenants.AsQueryable();
 
         var tenant = await query
             .Where(t => t.Slug == slug && !t.IsDeleted)
             .Select(t => new TenantDto(
                 t.Id, t.Slug, t.DisplayName, t.Description,
                 t.IsActive, t.CreatedAt,
-                t.Users.Count(u => !u.IsDeleted)))
+                t.Users.Count(u => !u.IsDeleted),
+                t.ServiceInstanceId,
+                t.ServiceInstance!.Name,
+                t.ServiceInstance!.ApiUrl))
             .FirstOrDefaultAsync(ct);
 
         return tenant is null ? NotFound() : Ok(tenant);
     }
 
-    // POST /api/tenants
+    // ── POST /api/tenants ────────────────────────────────────────────
     [HttpPost]
     [Authorize(Roles = "SuperUser")]
     public async Task<IActionResult> Create([FromBody] CreateTenantRequest req, CancellationToken ct)
@@ -63,22 +65,29 @@ public class TenantsController : ControllerBase
         if (await _db.Tenants.IgnoreQueryFilters().AnyAsync(t => t.Slug == req.Slug, ct))
             return Conflict($"Tenant slug '{req.Slug}' already exists.");
 
+        var instance = await _db.ServiceInstances
+            .FirstOrDefaultAsync(s => s.Id == req.ServiceInstanceId && s.IsActive, ct);
+        if (instance is null)
+            return BadRequest($"Service instance '{req.ServiceInstanceId}' does not exist or is inactive.");
+
         var tenant = new Tenant
         {
-            Slug        = req.Slug.ToLowerInvariant().Trim(),
-            DisplayName = req.DisplayName,
-            Description = req.Description,
-            IsActive    = true
+            Slug              = req.Slug.ToLowerInvariant().Trim(),
+            DisplayName       = req.DisplayName,
+            Description       = req.Description,
+            ServiceInstanceId = req.ServiceInstanceId,
+            IsActive          = true
         };
         _db.Tenants.Add(tenant);
         await _db.SaveChangesAsync(ct);
 
         return CreatedAtAction(nameof(GetBySlug), new { slug = tenant.Slug },
-            new TenantDto(tenant.Id, tenant.Slug, tenant.DisplayName,
-                          tenant.Description, tenant.IsActive, tenant.CreatedAt, 0));
+            new TenantDto(tenant.Id, tenant.Slug, tenant.DisplayName, tenant.Description,
+                          tenant.IsActive, tenant.CreatedAt, 0,
+                          instance.Id, instance.Name, instance.ApiUrl));
     }
 
-    // PUT /api/tenants/{slug}
+    // ── PUT /api/tenants/{slug} ──────────────────────────────────────
     [HttpPut("{slug}")]
     [Authorize(Roles = "SuperUser")]
     public async Task<IActionResult> Update(string slug, [FromBody] UpdateTenantRequest req, CancellationToken ct)
@@ -87,15 +96,19 @@ public class TenantsController : ControllerBase
             .FirstOrDefaultAsync(t => t.Slug == slug && !t.IsDeleted, ct);
         if (tenant is null) return NotFound();
 
-        tenant.DisplayName = req.DisplayName;
-        tenant.Description = req.Description;
-        tenant.IsActive    = req.IsActive;
-        tenant.UpdatedAt   = DateTime.UtcNow;
+        if (!await _db.ServiceInstances.AnyAsync(s => s.Id == req.ServiceInstanceId && s.IsActive, ct))
+            return BadRequest($"Service instance '{req.ServiceInstanceId}' does not exist or is inactive.");
+
+        tenant.DisplayName       = req.DisplayName;
+        tenant.Description       = req.Description;
+        tenant.ServiceInstanceId = req.ServiceInstanceId;
+        tenant.IsActive          = req.IsActive;
+        tenant.UpdatedAt         = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
         return NoContent();
     }
 
-    // DELETE /api/tenants/{slug}
+    // ── DELETE /api/tenants/{slug} ───────────────────────────────────
     [HttpDelete("{slug}")]
     [Authorize(Roles = "SuperUser")]
     public async Task<IActionResult> Delete(string slug, CancellationToken ct)
@@ -112,17 +125,13 @@ public class TenantsController : ControllerBase
         return NoContent();
     }
 
-    // PATCH /api/tenants/{slug}/activate
     [HttpPatch("{slug}/activate")]
     [Authorize(Roles = "SuperUser")]
-    public Task<IActionResult> Activate(string slug, CancellationToken ct)
-        => SetActive(slug, true, ct);
+    public Task<IActionResult> Activate(string slug, CancellationToken ct) => SetActive(slug, true, ct);
 
-    // PATCH /api/tenants/{slug}/deactivate
     [HttpPatch("{slug}/deactivate")]
     [Authorize(Roles = "SuperUser")]
-    public Task<IActionResult> Deactivate(string slug, CancellationToken ct)
-        => SetActive(slug, false, ct);
+    public Task<IActionResult> Deactivate(string slug, CancellationToken ct) => SetActive(slug, false, ct);
 
     private async Task<IActionResult> SetActive(string slug, bool active, CancellationToken ct)
     {

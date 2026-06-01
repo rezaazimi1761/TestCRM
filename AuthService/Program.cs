@@ -69,10 +69,13 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-// ── Auto-migrate on startup ────────────────────────────────────
+// ── Auto-migrate + seed default tenant & master admin on startup ─
 using (var scope = app.Services.CreateScope())
 {
-    scope.ServiceProvider.GetRequiredService<AuthDbContext>().Database.Migrate();
+    var db     = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    db.Database.Migrate();
+    await DataSeeder.SeedAsync(db, app.Configuration, logger);
 }
 
 if (app.Environment.IsDevelopment())

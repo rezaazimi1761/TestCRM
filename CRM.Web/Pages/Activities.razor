@@ -1,0 +1,120 @@
+﻿@page "/activities"
+@attribute [Authorize]
+@inject CrmApiClient Crm
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>Activities</PageTitle>
+
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4">
+    <MudIcon Icon="@Icons.Material.Filled.Event" Size="Size.Large" Color="Color.Primary" />
+    <MudText Typo="Typo.h4">Activities</MudText>
+    <MudSpacer />
+    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+               StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => OpenDialogAsync(null))">
+        New Activity
+    </MudButton>
+    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Refresh"
+               OnClick="Refresh" Class="ml-2">Refresh</MudButton>
+</MudStack>
+
+<MudTable Items="_items" Hover="true" Striped="true" Dense="true" Loading="_loading">
+    <HeaderContent>
+        <MudTh>Subject</MudTh>
+        <MudTh>Type</MudTh>
+        <MudTh>Due</MudTh>
+        <MudTh>Done</MudTh>
+        <MudTh>Actions</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.Subject</MudTd>
+        <MudTd>@context.Type</MudTd>
+        <MudTd>@context.DueDate?.ToString("yyyy-MM-dd")</MudTd>
+        <MudTd>
+            <MudIcon Icon="@(context.IsCompleted ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.RadioButtonUnchecked)"
+                     Color="@(context.IsCompleted ? Color.Success : Color.Default)" />
+        </MudTd>
+        <MudTd>
+            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small"
+                           OnClick="@(() => OpenDialogAsync(context))" />
+            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
+                           OnClick="@(() => DeleteAsync(context.Id))" />
+        </MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    private List<Activity> _items = new();
+    private bool _loading;
+
+    public class Activity
+    {
+        public int       Id          { get; set; }
+        public string?   Subject     { get; set; }
+        public string?   Type        { get; set; }
+        public string?   Description { get; set; }
+        public DateTime? DueDate     { get; set; }
+        public bool      IsCompleted { get; set; }
+    }
+
+    protected override Task OnInitializedAsync() => Refresh();
+
+    private async Task Refresh()
+    {
+        _loading = true;
+        try { _items = await Crm.GetListAsync<Activity>("/api/activities") ?? new(); }
+        catch (Exception ex) { Snackbar.Add($"Load failed: {ex.Message}", Severity.Error); }
+        finally { _loading = false; }
+    }
+
+    private async Task OpenDialogAsync(Activity? existing)
+    {
+        var model = existing is null ? null : new ActivityDialog.Model
+        {
+            Id          = existing.Id,
+            Subject     = existing.Subject ?? "",
+            Type        = existing.Type ?? "Task",
+            Description = existing.Description,
+            DueDate     = existing.DueDate,
+            IsCompleted = existing.IsCompleted
+        };
+
+        var parameters = new DialogParameters { ["Existing"] = model };
+        var dlg = await DialogService.ShowAsync<ActivityDialog>(existing is null ? "New Activity" : "Edit Activity", parameters);
+        var res = await dlg.Result;
+        if (res is null || res.Canceled) return;
+
+        var req = (ActivityDialog.Model)res.Data!;
+        HttpResponseMessage r;
+        if (req.Id == 0)
+            r = await Crm.PostAsync("/api/activities", new
+            {
+                subject = req.Subject, type = req.Type,
+                description = req.Description, dueDate = req.DueDate
+            });
+        else
+            r = await Crm.PutAsync($"/api/activities/{req.Id}", new
+            {
+                id = req.Id,
+                subject = req.Subject, type = req.Type,
+                description = req.Description, dueDate = req.DueDate, isCompleted = req.IsCompleted
+            });
+
+        Snackbar.Add(r.IsSuccessStatusCode
+            ? (req.Id == 0 ? "Activity created" : "Activity updated")
+            : $"Failed: {await r.Content.ReadAsStringAsync()}",
+            r.IsSuccessStatusCode ? Severity.Success : Severity.Error);
+        if (r.IsSuccessStatusCode) await Refresh();
+    }
+
+    private async Task DeleteAsync(int id)
+    {
+        var ok = await DialogService.ShowMessageBox("Delete activity?", "This action cannot be undone.",
+                                                    yesText: "Delete", cancelText: "Cancel");
+        if (ok != true) return;
+        var r = await Crm.DeleteAsync($"/api/activities/{id}");
+        Snackbar.Add(r.IsSuccessStatusCode ? "Deleted" : "Failed",
+                     r.IsSuccessStatusCode ? Severity.Success : Severity.Error);
+        await Refresh();
+    }
+}

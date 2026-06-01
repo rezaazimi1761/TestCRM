@@ -1,0 +1,97 @@
+@page "/login"
+@layout EmptyLayout
+@inject AuthApiClient AuthApi
+@inject AuthStateProvider AuthState
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+
+<PageTitle>Login — TestCRM</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraSmall" Class="mt-16">
+    <MudPaper Elevation="6" Class="pa-8">
+        <MudStack AlignItems="AlignItems.Center" Spacing="4">
+            <MudIcon Icon="@Icons.Material.Filled.Business" Size="Size.Large" Color="Color.Primary" />
+            <MudText Typo="Typo.h4">TestCRM</MudText>
+            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Sign in to your tenant</MudText>
+        </MudStack>
+
+        <MudForm @ref="_form" @bind-IsValid="_isValid" Class="mt-6">
+            <MudTextField @bind-Value="_model.TenantId"
+                          Label="Tenant" Variant="Variant.Outlined"
+                          Required="true" RequiredError="Tenant is required"
+                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Domain" />
+
+            <MudTextField @bind-Value="_model.Username"
+                          Label="Username" Variant="Variant.Outlined" Class="mt-4"
+                          Required="true" RequiredError="Username is required"
+                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Person" />
+
+            <MudTextField @bind-Value="_model.Password"
+                          Label="Password" Variant="Variant.Outlined"
+                          InputType="InputType.Password" Class="mt-4"
+                          Required="true" RequiredError="Password is required"
+                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Lock" />
+
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+                       Size="Size.Large" Class="mt-6"
+                       Disabled="!_isValid || _loading"
+                       OnClick="LoginAsync">
+                @if (_loading)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                }
+                else
+                {
+                    <span>Sign In</span>
+                }
+            </MudButton>
+        </MudForm>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    [Parameter, SupplyParameterFromQuery] public string? ReturnUrl { get; set; }
+
+    private MudForm? _form;
+    private bool _isValid;
+    private bool _loading;
+
+    private readonly LoginModel _model = new();
+
+    private class LoginModel
+    {
+        public string TenantId { get; set; } = "default";
+        public string Username { get; set; } = "";
+        public string Password { get; set; } = "";
+    }
+
+    private async Task LoginAsync()
+    {
+        _loading = true;
+        try
+        {
+            var res = await AuthApi.LoginAsync(
+                new AuthApiClient.LoginRequest(_model.TenantId, _model.Username, _model.Password));
+
+            if (res is null)
+            {
+                Snackbar.Add("Invalid credentials.", Severity.Error);
+                return;
+            }
+
+            await AuthState.SignInAsync(res.AccessToken, res.TenantId, res.ApiUrl);
+
+            Snackbar.Add($"Welcome {res.Username}! Routed to {res.ApiUrl}", Severity.Success);
+
+            Nav.NavigateTo(string.IsNullOrEmpty(ReturnUrl) ? "/dashboard" : ReturnUrl, true);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Login failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}

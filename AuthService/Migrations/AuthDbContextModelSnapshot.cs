@@ -113,6 +113,45 @@ namespace AuthService.Migrations
                     b.ToTable("RefreshTokens");
                 });
 
+            modelBuilder.Entity("AuthService.Domain.Entities.ServiceInstance", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ApiUrl")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("ServiceInstances");
+                });
+
             modelBuilder.Entity("AuthService.Domain.Entities.Tenant", b =>
                 {
                     b.Property<int>("Id")
@@ -139,6 +178,9 @@ namespace AuthService.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
+                    b.Property<Guid>("ServiceInstanceId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Slug")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -148,6 +190,8 @@ namespace AuthService.Migrations
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ServiceInstanceId");
 
                     b.HasIndex("Slug")
                         .IsUnique();
@@ -201,6 +245,17 @@ namespace AuthService.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("AuthService.Domain.Entities.Tenant", b =>
+                {
+                    b.HasOne("AuthService.Domain.Entities.ServiceInstance", "ServiceInstance")
+                        .WithMany("Tenants")
+                        .HasForeignKey("ServiceInstanceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ServiceInstance");
+                });
+
             modelBuilder.Entity("AuthService.Domain.Entities.UserClaim", b =>
                 {
                     b.HasOne("AuthService.Domain.Entities.AppUser", "User")
@@ -215,6 +270,11 @@ namespace AuthService.Migrations
                     b.Navigation("Claims");
 
                     b.Navigation("RefreshTokens");
+                });
+
+            modelBuilder.Entity("AuthService.Domain.Entities.ServiceInstance", b =>
+                {
+                    b.Navigation("Tenants");
                 });
 
             modelBuilder.Entity("AuthService.Domain.Entities.Tenant", b =>

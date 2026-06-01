@@ -1,0 +1,134 @@
+name: testcrm
+
+services:
+  # ────────────────────────────────────────────────────────────
+  # SQL Server — hosts auth DB and both CRM databases
+  # ────────────────────────────────────────────────────────────
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: testcrm-sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "Abc1234@$$"
+      MSSQL_PID: "Developer"
+    ports:
+      - "14330:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    networks:
+      - testcrm-net
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Abc1234@$$' -C -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  # ────────────────────────────────────────────────────────────
+  # Auth Service  →  host port 9041
+  # ────────────────────────────────────────────────────────────
+  auth-service:
+    build:
+      context: .
+      dockerfile: AuthService/Dockerfile
+    image: testcrm/auth-service:latest
+    container_name: testcrm-auth
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Production"
+      ASPNETCORE_URLS: "http://+:9041"
+      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=RezaTestProjAuth;User Id=sa;Password=Abc1234@$$;TrustServerCertificate=True;MultipleActiveResultSets=True;"
+      Jwt__Secret: "YourSuperSecretKeyMustBe32CharsMinimum!!"
+      Jwt__Issuer: "AuthService"
+      Jwt__Audience: "CRMServices"
+      Jwt__AccessTokenMinutes: "60"
+      Jwt__RefreshTokenDays: "7"
+    ports:
+      - "9041:9041"
+    networks:
+      - testcrm-net
+
+  # ────────────────────────────────────────────────────────────
+  # CRM Instance #1  →  host port 9040  →  DB: RezaTestProj_1
+  # ────────────────────────────────────────────────────────────
+  crm-api-1:
+    build:
+      context: .
+      dockerfile: TestCRM/Dockerfile
+    image: testcrm/crm-api:latest
+    container_name: testcrm-api-1
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Production"
+      ASPNETCORE_URLS: "http://+:9040"
+      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=RezaTestProj_1;User Id=sa;Password=Abc1234@$$;TrustServerCertificate=True;MultipleActiveResultSets=True;"
+      AuthService__Url:     "http://auth-service:9041"
+      AuthService__GrpcUrl: "http://auth-service:9041"
+      ServiceInstance__Name:   "crm-api-1"
+      ServiceInstance__ApiUrl: "http://crm-api-1:9040"
+    ports:
+      - "9040:9040"
+    networks:
+      - testcrm-net
+
+  # ────────────────────────────────────────────────────────────
+  # CRM Instance #2  →  host port 9042  →  DB: RezaTestProj_2
+  # ────────────────────────────────────────────────────────────
+  crm-api-2:
+    build:
+      context: .
+      dockerfile: TestCRM/Dockerfile
+    image: testcrm/crm-api:latest
+    container_name: testcrm-api-2
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Production"
+      ASPNETCORE_URLS: "http://+:9040"
+      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=RezaTestProj_2;User Id=sa;Password=Abc1234@$$;TrustServerCertificate=True;MultipleActiveResultSets=True;"
+      AuthService__Url:     "http://auth-service:9041"
+      AuthService__GrpcUrl: "http://auth-service:9041"
+      ServiceInstance__Name:   "crm-api-2"
+      ServiceInstance__ApiUrl: "http://crm-api-2:9040"
+    ports:
+      - "9042:9040"
+    networks:
+      - testcrm-net
+
+  # ────────────────────────────────────────────────────────────
+  # Blazor Web UI  →  host port 9050
+  # ────────────────────────────────────────────────────────────
+  crm-web:
+    build:
+      context: .
+      dockerfile: CRM.Web/Dockerfile
+    image: testcrm/crm-web:latest
+    container_name: testcrm-web
+    depends_on:
+      - auth-service
+      - crm-api-1
+      - crm-api-2
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Production"
+      ASPNETCORE_URLS: "http://+:9050"
+      AuthService__Url: "http://auth-service:9041"
+    ports:
+      - "9050:9050"
+    networks:
+      - testcrm-net
+
+networks:
+  testcrm-net:
+    driver: bridge
+
+volumes:
+  sqlserver_data:

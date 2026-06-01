@@ -14,5 +14,9 @@ public class Tenant
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
 
+    /// <summary>FK → the CRM service instance that hosts this tenant's data.</summary>
+    public Guid              ServiceInstanceId { get; set; }
+    public ServiceInstance?  ServiceInstance   { get; set; }
+
     public ICollection<AppUser> Users { get; set; } = new List<AppUser>();
 }
