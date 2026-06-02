@@ -1,45 +1,68 @@
-@inherits LayoutComponentBase
+﻿@inherits LayoutComponentBase
 @inject NavigationManager Nav
 @inject AuthStateProvider AuthState
 
 <PageTitle>TestCRM</PageTitle>
 
-<MudThemeProvider />
-<MudDialogProvider />
+<MudThemeProvider IsDarkMode="true" />
+<MudDialogProvider FullWidth="true" MaxWidth="MaxWidth.Small" CloseButton="true" />
 <MudSnackbarProvider />
 
 <MudLayout>
     <AuthorizeView>
         <Authorized>
-            <MudAppBar Elevation="1" Color="Color.Primary">
-                <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit"
+            <MudAppBar Elevation="1" Dense="false">
+                <MudIconButton Icon="@Icons.Material.Rounded.Menu" Color="Color.Inherit"
                                Edge="Edge.Start" OnClick="@(_ => _drawerOpen = !_drawerOpen)" />
-                <MudText Typo="Typo.h6" Class="ml-3">TestCRM</MudText>
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="ml-1">
+                    <MudIcon Icon="@Icons.Material.Rounded.Hub" Color="Color.Primary" />
+                    <MudText Typo="Typo.h6" Style="font-weight:700;">TestCRM</MudText>
+                </MudStack>
                 <MudSpacer />
-                <MudChip Color="Color.Secondary" Size="Size.Small">
+                <MudChip T="string" Variant="Variant.Outlined" Color="Color.Secondary"
+                         Size="Size.Small" Icon="@Icons.Material.Rounded.Domain" Class="mr-2">
                     @context.User.FindFirst("tenant_id")?.Value
                 </MudChip>
-                <MudText Class="mx-3">@context.User.Identity?.Name</MudText>
-                <MudIconButton Icon="@Icons.Material.Filled.Logout" Color="Color.Inherit"
-                               OnClick="LogoutAsync" />
+                <MudAvatar Color="Color.Primary" Size="Size.Small"
+                           Style="font-size:12px; font-weight:700; margin-right:6px;">
+                    @(context.User.Identity?.Name?.Substring(0,1).ToUpper())
+                </MudAvatar>
+                <MudText Style="font-size:13px; opacity:.75; margin-right:4px;">
+                    @context.User.Identity?.Name
+                </MudText>
+                <MudTooltip Text="Sign out">
+                    <MudIconButton Icon="@Icons.Material.Rounded.Logout" Color="Color.Inherit"
+                                   OnClick="LogoutAsync" Size="Size.Small" />
+                </MudTooltip>
             </MudAppBar>
 
-            <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
+            <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2"
+                       Variant="DrawerVariant.Persistent">
+                <MudDrawerHeader Style="padding: 16px;">
+                    <MudText Typo="Typo.overline"
+                             Style="letter-spacing:2px; font-size:10px; opacity:.4;">
+                        MENU
+                    </MudText>
+                </MudDrawerHeader>
+
                 <MudNavMenu>
-                    <MudNavLink Href="/dashboard" Icon="@Icons.Material.Filled.Dashboard">Dashboard</MudNavLink>
-                    <MudNavLink Href="/contacts" Icon="@Icons.Material.Filled.Contacts">Contacts</MudNavLink>
-                    <MudNavLink Href="/accounts" Icon="@Icons.Material.Filled.Business">Accounts</MudNavLink>
-                    <MudNavLink Href="/leads" Icon="@Icons.Material.Filled.PersonAdd">Leads</MudNavLink>
-                    <MudNavLink Href="/opportunities" Icon="@Icons.Material.Filled.MonetizationOn">Opportunities</MudNavLink>
-                    <MudNavLink Href="/activities" Icon="@Icons.Material.Filled.Event">Activities</MudNavLink>
-                    <MudNavLink Href="/users" Icon="@Icons.Material.Filled.People">Users</MudNavLink>
+                    <MudNavLink Href="/dashboard"     Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Rounded.Dashboard">Dashboard</MudNavLink>
+                    <MudNavLink Href="/contacts"      Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Rounded.Contacts">Contacts</MudNavLink>
+                    <MudNavLink Href="/accounts"      Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Rounded.Business">Accounts</MudNavLink>
+                    <MudNavLink Href="/leads"         Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Rounded.PersonSearch">Leads</MudNavLink>
+                    <MudNavLink Href="/opportunities" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Rounded.TrendingUp">Opportunities</MudNavLink>
+                    <MudNavLink Href="/activities"    Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Rounded.EventNote">Activities</MudNavLink>
+                    <MudNavLink Href="/users"         Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Rounded.Group">Users</MudNavLink>
 
                     @if (context.User.IsInRole("SuperUser"))
                     {
                         <MudDivider Class="my-2" />
-                        <MudText Typo="Typo.overline" Class="px-4">Administration</MudText>
-                        <MudNavLink Href="/tenants" Icon="@Icons.Material.Filled.Domain">Tenants</MudNavLink>
-                        <MudNavLink Href="/service-instances" Icon="@Icons.Material.Filled.Dns">Service Instances</MudNavLink>
+                        <MudText Typo="Typo.overline" Class="px-4"
+                                 Style="font-size:10px; letter-spacing:2px; opacity:.4;">
+                            ADMIN
+                        </MudText>
+                        <MudNavLink Href="/tenants"           Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Rounded.Domain">Tenants</MudNavLink>
+                        <MudNavLink Href="/service-instances" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Rounded.Dns">Service Instances</MudNavLink>
                     }
                 </MudNavMenu>
             </MudDrawer>
