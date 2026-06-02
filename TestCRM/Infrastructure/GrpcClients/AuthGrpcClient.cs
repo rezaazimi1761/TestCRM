@@ -21,6 +21,7 @@ public class AuthGrpcClient : IAuthGrpcClient, IDisposable
         var address = cfg["AuthService:GrpcUrl"]
                       ?? throw new InvalidOperationException("AuthService:GrpcUrl is not configured");
 
+        AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
         _channel = GrpcChannel.ForAddress(address);
         _client  = new AuthGrpc.AuthGrpcClient(_channel);
     }

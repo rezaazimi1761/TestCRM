@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Shared.Application.Interfaces;
 using Shared.Domain.Common;
 using TestCRM.Domain.Entities;
+using static Grpc.Core.Metadata;
 
 namespace TestCRM.Infrastructure.Persistence;
 
@@ -29,27 +30,39 @@ public class AppDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
-        // Apply global tenant query filter to every entity derived from BaseEntity
-        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        modelBuilder.Entity<AppUser>(entity =>
         {
-            if (!typeof(BaseEntity).IsAssignableFrom(entityType.ClrType)) continue;
-
-            var method = typeof(AppDbContext)
-                .GetMethod(nameof(ApplyTenantFilter), System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
-                .MakeGenericMethod(entityType.ClrType);
-
-            method.Invoke(this, [modelBuilder]);
-        }
-
-        modelBuilder.Entity<AppUser>()
-            .HasIndex(u => new { u.Email, u.TenantId })
+            entity.HasIndex(u => new { u.Email, u.TenantId })
             .IsUnique();
+            entity.HasQueryFilter(e => e.TenantId == _currentTenant && !e.IsDeleted);
+        });
+        modelBuilder.Entity<Contact>(entity =>
+        {
+            entity.HasQueryFilter(e => e.TenantId == _currentTenant && !e.IsDeleted);
+        });
+        modelBuilder.Entity<Account>(entity =>
+        {
+            entity.HasQueryFilter(e => e.TenantId == _currentTenant && !e.IsDeleted);
+        });
+        modelBuilder.Entity<Lead>(entity =>
+        {
+            entity.HasQueryFilter(e => e.TenantId == _currentTenant && !e.IsDeleted);
+        });
+        modelBuilder.Entity<Opportunity>(entity =>
+        {
+            entity.HasQueryFilter(e => e.TenantId == _currentTenant && !e.IsDeleted);
+        });
+        modelBuilder.Entity<Activity>(entity =>
+        {
+            entity.HasQueryFilter(e => e.TenantId == _currentTenant && !e.IsDeleted);
+        });
+        modelBuilder.Entity<Ticket>(entity =>
+        {
+            entity.HasQueryFilter(e => e.TenantId == _currentTenant && !e.IsDeleted);
+        });
     }
 
-    private void ApplyTenantFilter<T>(ModelBuilder modelBuilder) where T : BaseEntity
-    {
-        modelBuilder.Entity<T>().HasQueryFilter(e => e.TenantId == _currentTenant && !e.IsDeleted);
-    }
+
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
