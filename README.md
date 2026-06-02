@@ -10,7 +10,8 @@
 TestCRM.sln
 ├── 📦 Shared/              ← Class library — shared contracts, proto, base types
 ├── 🔐 AuthService/         ← JWT auth microservice  (port 9041)
-└── 🗂️  TestCRM/            ← CRM API service         (port 9040)
+├── 🗂️  TestCRM/            ← CRM API service         (port 9040)
+└── 🌐 CRM.Web/             ← Blazor Server frontend  (MudBlazor)
 ```
 
 ```
@@ -28,7 +29,8 @@ TestCRM.sln
         │  • Refresh     │   │  • Leads         │  ValidateToken
         │  • Tenants     │   │  • Opportunities │  GetUserById
         │  • Claims      │   │  • Activities    │  GetUserClaims
-        │  • Switch      │   │  • Users         │
+        │  • Switch      │   │  • Tickets       │
+        │                │   │  • Users         │
         └───────┬────────┘   └────────┬─────────┘
                 │                     │
                 ▼                     ▼
@@ -104,7 +106,7 @@ Tenant ────► AppUser  (FK: Tenant.Slug → AppUser.TenantId)
 
 ### `TestCRM` — CRM API (`:9040`)
 
-Full CRUD for all 6 CRM entities via **CQRS + MediatR**.
+Full CRUD for all 7 CRM entities via **CQRS + MediatR**.
 
 | Entity | Endpoints | Key Fields |
 |--------|-----------|------------|
@@ -114,6 +116,30 @@ Full CRUD for all 6 CRM entities via **CQRS + MediatR**.
 | **Lead** | `GET /api/leads` · `GET /{id}` · `POST` · `PUT /{id}` · `DELETE /{id}` | Name, Source, Status (New/Contacted/Qualified/Lost) |
 | **Opportunity** | `GET /api/opportunities` · `GET /{id}` · `POST` · `PUT /{id}` · `DELETE /{id}` | Title, Value, Stage, ExpectedCloseDate |
 | **Activity** | `GET /api/activities` · `GET /{id}` · `POST` · `PUT /{id}` · `DELETE /{id}` | Subject, Type, DueDate, IsCompleted |
+| **Ticket** | `GET /api/tickets` · `GET /{id}` · `POST` · `PUT /{id}` · `DELETE /{id}` | Subject, Status (New/Active/Closed/Removed), Priority (Low/Medium/High/Critical), DueDate, Category |
+
+---
+
+### `CRM.Web` — Blazor Server Frontend
+
+Blazor Server UI built on **MudBlazor 6.20.0**. Communicates with the CRM API via `CrmApiClient` and validates tokens through `AuthService`.
+
+| Page | Route | Description |
+|------|-------|-------------|
+| Login | `/login` | JWT login, stores token in `localStorage` |
+| Dashboard | `/` | KPI stat cards, donut charts (Ticket status / priority), due-date timeline |
+| Contacts | `/contacts` | Data grid + create/edit dialog |
+| Accounts | `/accounts` | Data grid + create/edit dialog |
+| Leads | `/leads` | Data grid + create/edit dialog |
+| Opportunities | `/opportunities` | Data grid + create/edit dialog |
+| Activities | `/activities` | Data grid + create/edit dialog |
+| Tickets | `/tickets` | Data grid + create/edit dialog |
+| Users | `/users` | Data grid + create/edit dialog |
+
+**Key implementation notes:**
+- `AuthStateProvider` wraps all `localStorage` calls in `SafeGetAsync` to silently handle `JSDisconnectedException` during Blazor circuit teardown.
+- `CrmApiClient` builds an `HttpClient` per call, attaching the stored JWT as `Authorization: Bearer`.
+- Dashboard donut chart arrays must be initialized to the correct length (`new double[4]`) — MudBlazor throws `IndexOutOfRangeException` if the array is shorter than the label count.
 
 ---
 
@@ -179,6 +205,7 @@ The CRM service reads the `tenant_id` claim transparently — EF filters apply t
 | Layer | Technology |
 |-------|-----------|
 | Runtime | .NET 8 / ASP.NET Core 8 |
+| Frontend | Blazor Server + MudBlazor 6.20.0 |
 | ORM | Entity Framework Core 8 + SQL Server |
 | Auth | JWT Bearer (HS256) + Refresh Tokens |
 | Service Communication | gRPC (Grpc.AspNetCore 2.62) |
@@ -240,6 +267,11 @@ dotnet run
 cd TestCRM
 dotnet run
 # → http://localhost:9040
+
+# Terminal 3 — Blazor Frontend
+cd CRM.Web
+dotnet run
+# → http://localhost:5000  (or configured port)
 ```
 
 Swagger UI: `http://localhost:9041/swagger` · `http://localhost:9040/swagger`
@@ -277,15 +309,29 @@ TestCRM.sln
 │   │   └── AuthGrpcService.cs
 │   └── Migrations/
 │
-└── TestCRM/
-    ├── Controllers/          (Users, Contacts, Accounts, Leads, Opportunities, Activities)
-    ├── Domain/Entities/
-    ├── Application/Features/ (CQRS Commands + Queries per entity)
-    ├── Infrastructure/
-    │   ├── Persistence/AppDbContext.cs
-    │   ├── GrpcClients/AuthGrpcClient.cs
-    │   └── Middleware/JwtAuthMiddleware.cs
-    └── Migrations/
+├── TestCRM/
+│   ├── Controllers/          (Users, Contacts, Accounts, Leads, Opportunities, Activities, Tickets)
+│   ├── Domain/Entities/      (includes Ticket.cs with TicketStatus + TicketPriority enums)
+│   ├── Application/Features/ (CQRS Commands + Queries per entity)
+│   ├── Infrastructure/
+│   │   ├── Persistence/AppDbContext.cs
+│   │   ├── GrpcClients/AuthGrpcClient.cs
+│   │   └── Middleware/JwtAuthMiddleware.cs
+│   └── Migrations/
+│
+└── CRM.Web/
+    ├── Auth/AuthStateProvider.cs
+    ├── Services/CrmApiClient.cs
+    ├── Pages/
+    │   ├── Dashboard.razor
+    │   ├── Contacts.razor  +  ContactDialog.razor
+    │   ├── Accounts.razor  +  AccountDialog.razor
+    │   ├── Leads.razor     +  LeadDialog.razor
+    │   ├── Opportunities.razor + OpportunityDialog.razor
+    │   ├── Activities.razor    + ActivityDialog.razor
+    │   ├── Tickets.razor   +  TicketDialog.razor
+    │   └── Users.razor     +  UserDialog.razor
+    └── Shared/MainLayout.razor
 ```
 
 ---
