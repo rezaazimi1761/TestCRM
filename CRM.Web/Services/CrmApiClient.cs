@@ -22,14 +22,22 @@ public class CrmApiClient
     private async Task<HttpClient> BuildAsync()
     {
         var token  = await _auth.GetTokenAsync();
-        var apiUrl = await _auth.GetApiUrlAsync()
-                     ?? throw new InvalidOperationException("No API URL stored — please log in again.");
+        var apiUrl = await _auth.GetApiUrlAsync();
+
+        // SafeGetAsync returns null when the circuit has disconnected or during
+        // prerender — treat that as a clean cancellation so Blazor disposes quietly.
+        if (apiUrl is null)
+            throw new OperationCanceledException("Circuit disconnected or not authenticated.");
+
         var http = _factory.CreateClient("crm");
         http.BaseAddress = new Uri(apiUrl);
         if (!string.IsNullOrWhiteSpace(token))
             http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         return http;
     }
+
+    // OperationCanceledException propagates upward — Blazor Server swallows it
+    // silently when the component is already being torn down.
 
     public async Task<List<T>?> GetListAsync<T>(string path)
         => await (await BuildAsync()).GetFromJsonAsync<List<T>>(path);

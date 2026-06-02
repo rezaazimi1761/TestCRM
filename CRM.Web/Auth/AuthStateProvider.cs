@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Blazored.LocalStorage;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.JSInterop;
 
 namespace CRM.Web.Auth;
 
@@ -14,9 +15,20 @@ public class AuthStateProvider : AuthenticationStateProvider
     private readonly ILocalStorageService _storage;
     public AuthStateProvider(ILocalStorageService storage) => _storage = storage;
 
-    public async Task<string?> GetTokenAsync()  => await _storage.GetItemAsStringAsync(TokenKey);
-    public async Task<string?> GetTenantAsync() => await _storage.GetItemAsStringAsync(TenantKey);
-    public async Task<string?> GetApiUrlAsync() => await _storage.GetItemAsStringAsync(ApiUrlKey);
+    // Swallow JS-interop errors that occur when the circuit is gone (navigation /
+    // tab close races with an ongoing async chain) or during server prerendering.
+    private async Task<string?> SafeGetAsync(string key)
+    {
+        try   { return await _storage.GetItemAsStringAsync(key); }
+        catch (JSDisconnectedException)  { return null; }
+        catch (JSException)              { return null; }
+        catch (InvalidOperationException){ return null; }
+        catch (OperationCanceledException){ return null; }
+    }
+
+    public Task<string?> GetTokenAsync()  => SafeGetAsync(TokenKey);
+    public Task<string?> GetTenantAsync() => SafeGetAsync(TenantKey);
+    public Task<string?> GetApiUrlAsync() => SafeGetAsync(ApiUrlKey);
 
     public async Task SignInAsync(string token, string tenantId, string apiUrl)
     {
@@ -39,17 +51,8 @@ public class AuthStateProvider : AuthenticationStateProvider
 
     public override async Task<AuthenticationState> GetAuthenticationStateAsync()
     {
-        string? token;
-        try
-        {
-            // During server prerendering JS interop is not yet available.
-            // Treat that case as "not authenticated yet" instead of throwing.
-            token = await GetTokenAsync();
-        }
-        catch (InvalidOperationException)
-        {
-            return Anonymous;
-        }
+        // SafeGetAsync already handles prerender / circuit-disconnected cases.
+        var token = await GetTokenAsync();
 
         if (string.IsNullOrWhiteSpace(token)) return Anonymous;
 
