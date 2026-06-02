@@ -19,17 +19,36 @@
                     <MudText Typo="Typo.h6" Style="font-weight:700;">TestCRM</MudText>
                 </MudStack>
                 <MudSpacer />
-                <MudChip T="string" Variant="Variant.Outlined" Color="Color.Secondary"
-                         Size="Size.Small" Icon="@Icons.Material.Rounded.Domain" Class="mr-2">
-                    @context.User.FindFirst("tenant_id")?.Value
-                </MudChip>
-                <MudAvatar Color="Color.Primary" Size="Size.Small"
-                           Style="font-size:12px; font-weight:700; margin-right:6px;">
-                    @(context.User.Identity?.Name?.Substring(0,1).ToUpper())
-                </MudAvatar>
-                <MudText Style="font-size:13px; opacity:.75; margin-right:4px;">
-                    @context.User.Identity?.Name
-                </MudText>
+
+                @* ── Tenant / User info pill ── *@
+                <MudPaper Elevation="0" Style="
+                    background: rgba(255,255,255,0.05);
+                    border: 1px solid rgba(255,255,255,0.10);
+                    border-radius: 999px;
+                    padding: 4px 12px 4px 8px;
+                    display: flex; align-items: center; gap: 6px;
+                    margin-right: 10px;">
+
+                    @* Tenant *@
+                    <MudIcon Icon="@Icons.Material.Rounded.Domain"
+                             Size="Size.Small" Color="Color.Secondary"
+                             Style="font-size:15px;" />
+                    <MudText Style="font-size:12px; font-weight:600; color:var(--mud-palette-secondary); letter-spacing:.02em;">
+                        @context.User.FindFirst("tenant_id")?.Value
+                    </MudText>
+
+                    @* Separator *@
+                    <MudText Style="opacity:.25; font-size:14px; margin: 0 2px;">|</MudText>
+
+                    @* User full name *@
+                    <MudIcon Icon="@Icons.Material.Rounded.Person"
+                             Size="Size.Small" Color="Color.Primary"
+                             Style="font-size:15px;" />
+                    <MudText Style="font-size:12px; font-weight:600; opacity:.85;">
+                        @($"{context.User.FindFirst("first_name")?.Value} {context.User.FindFirst("last_name")?.Value}".Trim())
+                    </MudText>
+                </MudPaper>
+
                 <MudTooltip Text="Sign out">
                     <MudIconButton Icon="@Icons.Material.Rounded.Logout" Color="Color.Inherit"
                                    OnClick="LogoutAsync" Size="Size.Small" />

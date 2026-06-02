@@ -1,22 +1,33 @@
 ﻿@page "/users"
 @attribute [Authorize]
 @inject CrmApiClient Crm
+@inject AuthAdminClient AuthAdmin
+@inject AuthStateProvider AuthState
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
+@inject AuthenticationStateProvider AuthStateProvider
 
 <PageTitle>Users</PageTitle>
 
 <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4">
-    <MudIcon Icon="@Icons.Material.Filled.People" Size="Size.Large" Color="Color.Primary" />
+    <MudIcon Icon="@Icons.Material.Rounded.Group" Size="Size.Large" Color="Color.Primary" />
     <MudText Typo="Typo.h4">Users</MudText>
     <MudSpacer />
     <MudButton Variant="Variant.Filled" Color="Color.Primary"
-               StartIcon="@Icons.Material.Filled.PersonAdd" OnClick="@(() => OpenDialogAsync(null))">
+               StartIcon="@Icons.Material.Rounded.PersonAdd"
+               OnClick="@(() => OpenDialogAsync(null))">
         New User
     </MudButton>
-    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Refresh"
+    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Rounded.Refresh"
                OnClick="Refresh" Class="ml-2">Refresh</MudButton>
 </MudStack>
+
+@if (_createStep is not null)
+{
+    <MudAlert Severity="Severity.Info" Class="mb-4" Dense="true" Icon="@Icons.Material.Rounded.Info">
+        @_createStep
+    </MudAlert>
+}
 
 <MudTable Items="_items" Hover="true" Striped="true" Dense="true" Loading="_loading">
     <HeaderContent>
@@ -27,29 +38,44 @@
         <MudTh>Actions</MudTh>
     </HeaderContent>
     <RowTemplate>
-        <MudTd>@context.FirstName @context.LastName</MudTd>
-        <MudTd>@context.Email</MudTd>
-        <MudTd><MudChip Size="Size.Small" Color="Color.Primary">@context.Role</MudChip></MudTd>
         <MudTd>
-            <MudIcon Icon="@(context.IsActive ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Cancel)"
-                     Color="@(context.IsActive ? Color.Success : Color.Error)" />
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudAvatar Color="Color.Primary" Size="Size.Small"
+                           Style="font-size:11px; font-weight:700; width:28px; height:28px;">
+                    @(context.FirstName?.Substring(0,1).ToUpper())
+                </MudAvatar>
+                <span>@context.FirstName @context.LastName</span>
+            </MudStack>
+        </MudTd>
+        <MudTd>@context.Email</MudTd>
+        <MudTd>
+            <MudChip Size="Size.Small"
+                     Color="@(context.Role == "SuperUser" ? Color.Error : context.Role == "Admin" ? Color.Warning : Color.Primary)">
+                @context.Role
+            </MudChip>
         </MudTd>
         <MudTd>
-            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small"
+            <MudIcon Icon="@(context.IsActive ? Icons.Material.Rounded.CheckCircle : Icons.Material.Rounded.Cancel)"
+                     Color="@(context.IsActive ? Color.Success : Color.Error)" Size="Size.Small" />
+        </MudTd>
+        <MudTd>
+            <MudIconButton Icon="@Icons.Material.Rounded.Edit" Color="Color.Primary" Size="Size.Small"
                            OnClick="@(() => OpenDialogAsync(context))" />
-            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
+            <MudIconButton Icon="@Icons.Material.Rounded.Delete" Color="Color.Error" Size="Size.Small"
                            OnClick="@(() => DeleteAsync(context.Id))" />
         </MudTd>
     </RowTemplate>
 </MudTable>
 
 @code {
-    private List<AppUser> _items = new();
-    private bool _loading;
+    private List<AppUser> _items  = new();
+    private bool          _loading;
+    private string?       _createStep;
 
     public class AppUser
     {
         public int     Id        { get; set; }
+        public string? Username  { get; set; }
         public string? FirstName { get; set; }
         public string? LastName  { get; set; }
         public string? Email     { get; set; }
@@ -72,48 +98,126 @@
         var model = existing is null ? null : new UserDialog.Model
         {
             Id        = existing.Id,
+            Username  = existing.Username  ?? "",
             FirstName = existing.FirstName ?? "",
             LastName  = existing.LastName  ?? "",
             Email     = existing.Email     ?? "",
-            Role      = existing.Role,
+            Role      = existing.Role      ?? "User",
             IsActive  = existing.IsActive
         };
 
-        var parameters = new DialogParameters { ["Existing"] = model };
-        var dlg = await DialogService.ShowAsync<UserDialog>(existing is null ? "New User" : "Edit User", parameters);
+        var authState    = await AuthStateProvider.GetAuthenticationStateAsync();
+        var isSuperUser  = authState.User.IsInRole("SuperUser");
+
+        var parameters = new DialogParameters
+        {
+            ["Existing"]          = model,
+            ["CallerIsSuperUser"] = isSuperUser
+        };
+        var dlg = await DialogService.ShowAsync<UserDialog>(
+            existing is null ? "New User" : "Edit User", parameters);
         var res = await dlg.Result;
         if (res is null || res.Canceled) return;
 
         var req = (UserDialog.Model)res.Data!;
-        HttpResponseMessage r;
+
         if (req.Id == 0)
-            r = await Crm.PostAsync("/api/users", new
-            {
-                firstName = req.FirstName, lastName = req.LastName,
-                email = req.Email, password = req.Password, role = req.Role
-            });
+            await CreateUserAsync(req);
         else
-            r = await Crm.PutAsync($"/api/users/{req.Id}", new
-            {
-                id = req.Id,
-                firstName = req.FirstName, lastName = req.LastName,
-                email = req.Email, role = req.Role, isActive = req.IsActive
-            });
+            await UpdateUserAsync(req);
+    }
+
+    // ── Create: Auth first → then CRM ────────────────────────────
+    private async Task CreateUserAsync(UserDialog.Model req)
+    {
+        var tenantId = await AuthState.GetTenantAsync();
+        if (string.IsNullOrWhiteSpace(tenantId))
+        {
+            Snackbar.Add("Could not determine current tenant.", Severity.Error);
+            return;
+        }
+
+        // Step 1 — Auth service
+        _createStep = "Step 1 / 2 — Creating auth account…";
+        StateHasChanged();
+
+        var authResp = await AuthAdmin.PostAsync("/api/auth/register", new
+        {
+            tenantId  = tenantId,
+            username  = req.Username,
+            email     = req.Email,
+            firstName = req.FirstName,
+            lastName  = req.LastName,
+            password  = req.Password,
+            role      = req.Role
+        });
+
+        if (!authResp.IsSuccessStatusCode)
+        {
+            _createStep = null;
+            var err = await authResp.Content.ReadAsStringAsync();
+            Snackbar.Add($"Auth failed ({(int)authResp.StatusCode}): {err}", Severity.Error);
+            return;
+        }
+
+        // Step 2 — CRM service
+        _createStep = "Step 2 / 2 — Creating CRM profile…";
+        StateHasChanged();
+
+        var crmResp = await Crm.PostAsync("/api/users", new
+        {
+            firstName = req.FirstName,
+            lastName  = req.LastName,
+            email     = req.Email,
+            password  = req.Password,
+            role      = req.Role
+        });
+
+        _createStep = null;
+
+        if (crmResp.IsSuccessStatusCode)
+        {
+            Snackbar.Add("User created in Auth + CRM ✓", Severity.Success);
+            await Refresh();
+        }
+        else
+        {
+            var err = await crmResp.Content.ReadAsStringAsync();
+            Snackbar.Add($"Auth OK but CRM failed: {err}", Severity.Warning);
+            await Refresh();
+        }
+    }
+
+    // ── Update: CRM only (Auth has no update endpoint) ───────────
+    private async Task UpdateUserAsync(UserDialog.Model req)
+    {
+        var r = await Crm.PutAsync($"/api/users/{req.Id}", new
+        {
+            id        = req.Id,
+            firstName = req.FirstName,
+            lastName  = req.LastName,
+            email     = req.Email,
+            role      = req.Role,
+            isActive  = req.IsActive
+        });
 
         Snackbar.Add(r.IsSuccessStatusCode
-            ? (req.Id == 0 ? "User created" : "User updated")
-            : $"Failed: {await r.Content.ReadAsStringAsync()}",
+            ? "User updated ✓"
+            : $"Update failed: {await r.Content.ReadAsStringAsync()}",
             r.IsSuccessStatusCode ? Severity.Success : Severity.Error);
+
         if (r.IsSuccessStatusCode) await Refresh();
     }
 
     private async Task DeleteAsync(int id)
     {
-        var ok = await DialogService.ShowMessageBox("Delete user?", "This action cannot be undone.",
-                                                    yesText: "Delete", cancelText: "Cancel");
+        var ok = await DialogService.ShowMessageBox(
+            "Delete user?", "This removes the user from CRM. Auth account must be removed separately.",
+            yesText: "Delete", cancelText: "Cancel");
         if (ok != true) return;
+
         var r = await Crm.DeleteAsync($"/api/users/{id}");
-        Snackbar.Add(r.IsSuccessStatusCode ? "Deleted" : "Failed",
+        Snackbar.Add(r.IsSuccessStatusCode ? "Deleted from CRM" : "Failed",
                      r.IsSuccessStatusCode ? Severity.Success : Severity.Error);
         await Refresh();
     }

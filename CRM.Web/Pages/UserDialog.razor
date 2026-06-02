@@ -1,66 +1,123 @@
-@namespace CRM.Web.Pages
+﻿@namespace CRM.Web.Pages
 
 <MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudIcon Icon="@(_isEdit ? Icons.Material.Rounded.ManageAccounts : Icons.Material.Rounded.PersonAdd)"
+                     Color="Color.Primary" />
+            <MudText Typo="Typo.h6">@(_isEdit ? "Edit User" : "New User")</MudText>
+        </MudStack>
+    </TitleContent>
     <DialogContent>
         <MudForm @ref="_form" @bind-IsValid="_isValid">
-            <MudGrid>
+
+            @if (!_isEdit)
+            {
+                @* ── Auth Account section (create only) ── *@
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="mb-2 mt-1">
+                    <MudIcon Icon="@Icons.Material.Rounded.Lock" Size="Size.Small" Color="Color.Secondary" />
+                    <MudText Typo="Typo.overline" Style="font-size:10px; letter-spacing:2px; opacity:.5;">
+                        AUTH ACCOUNT
+                    </MudText>
+                </MudStack>
+                <MudGrid Spacing="2">
+                    <MudItem xs="6">
+                        <MudTextField @bind-Value="_model.Username" Label="Username"
+                                      Variant="Variant.Outlined" Required="true"
+                                      RequiredError="Username is required"
+                                      Adornment="Adornment.Start"
+                                      AdornmentIcon="@Icons.Material.Rounded.AlternateEmail" />
+                    </MudItem>
+                    <MudItem xs="6">
+                        <MudTextField @bind-Value="_model.Password" Label="Password"
+                                      Variant="Variant.Outlined" Required="true"
+                                      RequiredError="Password is required"
+                                      InputType="InputType.Password"
+                                      Adornment="Adornment.Start"
+                                      AdornmentIcon="@Icons.Material.Rounded.Key" />
+                    </MudItem>
+                </MudGrid>
+
+                <MudDivider Class="my-4" />
+            }
+
+            @* ── CRM Profile section ── *@
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="mb-2">
+                <MudIcon Icon="@Icons.Material.Rounded.Badge" Size="Size.Small" Color="Color.Primary" />
+                <MudText Typo="Typo.overline" Style="font-size:10px; letter-spacing:2px; opacity:.5;">
+                    PROFILE
+                </MudText>
+            </MudStack>
+            <MudGrid Spacing="2">
                 <MudItem xs="6">
                     <MudTextField @bind-Value="_model.FirstName" Label="First Name"
-                                  Variant="Variant.Outlined" Required="true" />
+                                  Variant="Variant.Outlined" Required="true"
+                                  RequiredError="First name is required" />
                 </MudItem>
                 <MudItem xs="6">
                     <MudTextField @bind-Value="_model.LastName" Label="Last Name"
-                                  Variant="Variant.Outlined" Required="true" />
+                                  Variant="Variant.Outlined" Required="true"
+                                  RequiredError="Last name is required" />
                 </MudItem>
                 <MudItem xs="12">
                     <MudTextField @bind-Value="_model.Email" Label="Email"
-                                  Variant="Variant.Outlined" InputType="InputType.Email" Required="true" />
+                                  Variant="Variant.Outlined" InputType="InputType.Email"
+                                  Required="true" RequiredError="Email is required"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Rounded.Email" />
                 </MudItem>
-                @if (_model.Id == 0)
-                {
-                    <MudItem xs="12">
-                        <MudTextField @bind-Value="_model.Password" Label="Password"
-                                      Variant="Variant.Outlined" InputType="InputType.Password" Required="true" />
-                    </MudItem>
-                }
                 <MudItem xs="6">
                     <MudSelect T="string" @bind-Value="_model.Role" Label="Role"
-                               Variant="Variant.Outlined">
+                               Variant="Variant.Outlined"
+                               Adornment="Adornment.Start"
+                               AdornmentIcon="@Icons.Material.Rounded.Shield">
                         <MudSelectItem Value="@("User")">User</MudSelectItem>
-                        <MudSelectItem Value="@("Admin")">Admin</MudSelectItem>
-                        <MudSelectItem Value="@("SuperUser")">SuperUser</MudSelectItem>
+                        @if (CallerIsSuperUser)
+                        {
+                            <MudSelectItem Value="@("Admin")">Admin</MudSelectItem>
+                            <MudSelectItem Value="@("SuperUser")">SuperUser</MudSelectItem>
+                        }
                     </MudSelect>
                 </MudItem>
-                <MudItem xs="6" Class="d-flex align-center">
-                    <MudCheckBox @bind-Value="_model.IsActive" Label="Active" Color="Color.Primary" />
-                </MudItem>
+                @if (_isEdit)
+                {
+                    <MudItem xs="6" Class="d-flex align-center">
+                        <MudCheckBox @bind-Value="_model.IsActive" Label="Active" Color="Color.Primary" />
+                    </MudItem>
+                }
             </MudGrid>
+
         </MudForm>
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
         <MudButton Color="Color.Primary" Variant="Variant.Filled"
-                   Disabled="!_isValid" OnClick="Submit">@_submitLabel</MudButton>
+                   Disabled="!_isValid" OnClick="Submit"
+                   StartIcon="@(_isEdit ? Icons.Material.Rounded.Save : Icons.Material.Rounded.PersonAdd)">
+            @(_isEdit ? "Save Changes" : "Create User")
+        </MudButton>
     </DialogActions>
 </MudDialog>
 
 @code {
     [CascadingParameter] private MudDialogInstance Dialog { get; set; } = default!;
-    [Parameter] public Model? Existing { get; set; }
+    [Parameter] public Model? Existing          { get; set; }
+    [Parameter] public bool   CallerIsSuperUser { get; set; }
 
     private MudForm? _form;
     private bool _isValid;
+    private bool _isEdit;
     private Model _model = new();
-    private string _submitLabel = "Create";
 
     public class Model
     {
         public int     Id        { get; set; }
+        public string  Username  { get; set; } = "";
         public string  FirstName { get; set; } = "";
         public string  LastName  { get; set; } = "";
         public string  Email     { get; set; } = "";
         public string? Password  { get; set; }
-        public string? Role      { get; set; } = "User";
+        public string  Role      { get; set; } = "User";
         public bool    IsActive  { get; set; } = true;
     }
 
@@ -68,16 +125,17 @@
     {
         if (Existing is not null)
         {
+            _isEdit = true;
             _model = new Model
             {
                 Id        = Existing.Id,
+                Username  = Existing.Username,
                 FirstName = Existing.FirstName,
                 LastName  = Existing.LastName,
                 Email     = Existing.Email,
                 Role      = Existing.Role,
                 IsActive  = Existing.IsActive
             };
-            _submitLabel = "Save";
         }
     }
 
