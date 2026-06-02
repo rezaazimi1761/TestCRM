@@ -17,12 +17,11 @@ public static class DataSeeder
 {
     // A well-known GUID for the placeholder instance — admins can edit later
     // and a real CRM service that self-registers will update its row.
-    public static readonly Guid DefaultServiceInstanceId =
-        Guid.Parse("00000000-0000-0000-0000-000000000001");
 
     public static async Task SeedAsync(AuthDbContext db, IConfiguration cfg, ILogger logger,
                                        CancellationToken ct = default)
     {
+        var defaultServiceInstanceId = Guid.Parse(cfg["Seed:DefaultServiceInstanceId"] ?? "d91c58cd-fc1c-493d-b037-31f146ecd1f3");
         var defaultInstanceUrl  = cfg["Seed:DefaultServiceInstanceUrl"] ?? "http://localhost:9040";
         var defaultInstanceName = cfg["Seed:DefaultServiceInstanceName"] ?? "default-instance";
         var defaultTenantSlug   = cfg["Seed:DefaultTenantSlug"]          ?? "default";
@@ -35,13 +34,13 @@ public static class DataSeeder
 
         // 1. ServiceInstance ────────────────────────────────────────
         var instance = await db.ServiceInstances.IgnoreQueryFilters()
-            .FirstOrDefaultAsync(s => s.Id == DefaultServiceInstanceId, ct);
+            .FirstOrDefaultAsync(s => s.Id == defaultServiceInstanceId, ct);
 
         if (instance is null)
         {
             instance = new ServiceInstance
             {
-                Id          = DefaultServiceInstanceId,
+                Id          = defaultServiceInstanceId,
                 Name        = defaultInstanceName,
                 ApiUrl      = defaultInstanceUrl,
                 Description = "Placeholder instance created by AuthService seeder. " +
