@@ -42,6 +42,22 @@ public class CrmApiClient
     public async Task<List<T>?> GetListAsync<T>(string path)
         => await (await BuildAsync()).GetFromJsonAsync<List<T>>(path);
 
+    public async Task<PagedResult<T>?> GetPagedAsync<T>(
+        string path, int page, int pageSize,
+        string? sortBy = null, bool sortDesc = false,
+        string? search = null,
+        Dictionary<string, string?>? extraFilters = null)
+    {
+        var url = $"{path}?page={page}&pageSize={pageSize}&sortDesc={sortDesc}";
+        if (!string.IsNullOrWhiteSpace(sortBy))  url += $"&sortBy={Uri.EscapeDataString(sortBy)}";
+        if (!string.IsNullOrWhiteSpace(search))  url += $"&search={Uri.EscapeDataString(search)}";
+        if (extraFilters != null)
+            foreach (var (key, value) in extraFilters)
+                if (!string.IsNullOrWhiteSpace(value))
+                    url += $"&{key}={Uri.EscapeDataString(value)}";
+        return await (await BuildAsync()).GetFromJsonAsync<PagedResult<T>>(url);
+    }
+
     public async Task<T?> GetAsync<T>(string path)
         => await (await BuildAsync()).GetFromJsonAsync<T>(path);
 

@@ -13,7 +13,11 @@ public class ContactsController : ControllerBase
     public ContactsController(IMediator mediator) => _mediator = mediator;
 
     [HttpGet]
-    public async Task<IActionResult> GetAll() => Ok(await _mediator.Send(new GetContactsQuery()));
+    public async Task<IActionResult> GetAll(
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 20,
+        [FromQuery] string? sortBy = null, [FromQuery] bool sortDesc = false,
+        [FromQuery] string? search = null)
+        => Ok(await _mediator.Send(new GetContactsQuery(page, pageSize, sortBy, sortDesc, search)));
 
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id)

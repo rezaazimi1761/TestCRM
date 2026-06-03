@@ -13,7 +13,12 @@ public class TicketsController : ControllerBase
     public TicketsController(IMediator mediator) => _mediator = mediator;
 
     [HttpGet]
-    public async Task<IActionResult> GetAll() => Ok(await _mediator.Send(new GetTicketsQuery()));
+    public async Task<IActionResult> GetAll(
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 20,
+        [FromQuery] string? sortBy = null, [FromQuery] bool sortDesc = false,
+        [FromQuery] string? search = null,
+        [FromQuery] string? status = null, [FromQuery] string? priority = null)
+        => Ok(await _mediator.Send(new GetTicketsQuery(page, pageSize, sortBy, sortDesc, search, status, priority)));
 
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id)

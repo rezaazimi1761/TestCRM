@@ -13,7 +13,11 @@ public class LeadsController : ControllerBase
     public LeadsController(IMediator mediator) => _mediator = mediator;
 
     [HttpGet]
-    public async Task<IActionResult> GetAll() => Ok(await _mediator.Send(new GetLeadsQuery()));
+    public async Task<IActionResult> GetAll(
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 20,
+        [FromQuery] string? sortBy = null, [FromQuery] bool sortDesc = false,
+        [FromQuery] string? search = null, [FromQuery] string? status = null)
+        => Ok(await _mediator.Send(new GetLeadsQuery(page, pageSize, sortBy, sortDesc, search, status)));
 
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id)

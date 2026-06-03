@@ -2,6 +2,7 @@
 @attribute [Authorize]
 @inject AuthStateProvider AuthState
 @inject CrmApiClient Crm
+@using CRM.Web.Services
 
 <PageTitle>Dashboard — TestCRM</PageTitle>
 
@@ -226,19 +227,19 @@
     {
         _instanceUrl = await AuthState.GetApiUrlAsync() ?? "(unknown)";
 
-        var contactsTask = Crm.GetListAsync<object>("/api/contacts");
-        var accountsTask = Crm.GetListAsync<object>("/api/accounts");
-        var leadsTask    = Crm.GetListAsync<object>("/api/leads");
-        var oppsTask     = Crm.GetListAsync<object>("/api/opportunities");
-        var ticketsTask  = Crm.GetListAsync<TicketSummary>("/api/tickets");
+        var contactsTask = Crm.GetPagedAsync<object>("/api/contacts", 1, 1);
+        var accountsTask = Crm.GetPagedAsync<object>("/api/accounts", 1, 1);
+        var leadsTask    = Crm.GetPagedAsync<object>("/api/leads",    1, 1);
+        var oppsTask     = Crm.GetPagedAsync<object>("/api/opportunities", 1, 1);
+        var ticketsTask  = Crm.GetPagedAsync<TicketSummary>("/api/tickets", 1, 1000);
 
         await Task.WhenAll(contactsTask, accountsTask, leadsTask, oppsTask, ticketsTask);
 
-        _contacts = contactsTask.Result?.Count ?? 0;
-        _accounts = accountsTask.Result?.Count ?? 0;
-        _leads    = leadsTask.Result?.Count    ?? 0;
-        _opps     = oppsTask.Result?.Count     ?? 0;
-        _tickets  = ticketsTask.Result         ?? new();
+        _contacts = contactsTask.Result?.TotalCount ?? 0;
+        _accounts = accountsTask.Result?.TotalCount ?? 0;
+        _leads    = leadsTask.Result?.TotalCount    ?? 0;
+        _opps     = oppsTask.Result?.TotalCount     ?? 0;
+        _tickets  = ticketsTask.Result?.Items       ?? new();
 
         BuildCharts();
     }

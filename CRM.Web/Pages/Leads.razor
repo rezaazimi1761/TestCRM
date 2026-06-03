@@ -1,4 +1,4 @@
-﻿@page "/leads"
+@page "/leads"
 @attribute [Authorize]
 @inject CrmApiClient Crm
 @inject ISnackbar Snackbar
@@ -6,43 +6,60 @@
 
 <PageTitle>Leads</PageTitle>
 
-<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4">
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-3">
     <MudIcon Icon="@Icons.Material.Filled.PersonSearch" Size="Size.Large" Color="Color.Primary" />
     <MudText Typo="Typo.h4">Leads</MudText>
     <MudSpacer />
+    <MudTextField @bind-Value="_search" Placeholder="Search name, email, company…"
+                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                  Immediate="true" DebounceInterval="350"
+                  OnDebounceIntervalElapsed="OnSearchChanged"
+                  Variant="Variant.Outlined" Margin="Margin.Dense"
+                  Style="min-width:240px" />
+    <MudSelect T="string" Value="_statusFilter" Placeholder="All Statuses"
+               Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true"
+               Style="min-width:160px" Class="ml-2"
+               ValueChanged="@((string? v) => { _statusFilter = v; _ = OnSearchChanged(); })">
+        @foreach (var s in new[]{"New","Contacted","Qualified","Lost","Converted"})
+        { <MudSelectItem Value="@s">@s</MudSelectItem> }
+    </MudSelect>
     <MudButton Variant="Variant.Filled" Color="Color.Primary"
-               StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => OpenDialogAsync(null))">
+               StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => OpenDialogAsync(null))" Class="ml-2">
         New Lead
     </MudButton>
-    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Refresh"
-               OnClick="Refresh" Class="ml-2">Refresh</MudButton>
 </MudStack>
 
-<MudTable Items="_items" Hover="true" Striped="true" Dense="true" Loading="_loading">
-    <HeaderContent>
-        <MudTh>Name</MudTh>
-        <MudTh>Email</MudTh>
-        <MudTh>Company</MudTh>
-        <MudTh>Status</MudTh>
-        <MudTh>Actions</MudTh>
-    </HeaderContent>
-    <RowTemplate>
-        <MudTd>@context.FirstName @context.LastName</MudTd>
-        <MudTd>@context.Email</MudTd>
-        <MudTd>@context.Company</MudTd>
-        <MudTd><MudChip Size="Size.Small" Color="Color.Info">@context.Status</MudChip></MudTd>
-        <MudTd>
-            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small"
-                           OnClick="@(() => OpenDialogAsync(context))" />
-            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
-                           OnClick="@(() => DeleteAsync(context.Id))" />
-        </MudTd>
-    </RowTemplate>
-</MudTable>
+<MudDataGrid T="Lead" @ref="_grid" ServerData="LoadServerData"
+             Hover="true" Dense="true" Striped="true" SortMode="SortMode.Single" Filterable="false">
+    <Columns>
+        <PropertyColumn Property="x => x.FirstName" Title="First Name" />
+        <PropertyColumn Property="x => x.LastName"  Title="Last Name" />
+        <PropertyColumn Property="x => x.Email"     Title="Email" />
+        <PropertyColumn Property="x => x.Company"   Title="Company" />
+        <PropertyColumn Property="x => x.Source"    Title="Source" />
+        <TemplateColumn Title="Status" SortBy="@(new Func<Lead,object?>(x => x.Status))">
+            <CellTemplate>
+                <MudChip Size="Size.Small" Color="@StatusColor(context.Item.Status)">@context.Item.Status</MudChip>
+            </CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="Actions" Sortable="false">
+            <CellTemplate>
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small"
+                               OnClick="@(() => OpenDialogAsync(context.Item))" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
+                               OnClick="@(() => DeleteAsync(context.Item.Id))" />
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+    <PagerContent>
+        <MudDataGridPager T="Lead" PageSizeOptions="new[]{10,20,50,100}" />
+    </PagerContent>
+</MudDataGrid>
 
 @code {
-    private List<Lead> _items = new();
-    private bool _loading;
+    private MudDataGrid<Lead>? _grid;
+    private string? _search;
+    private string? _statusFilter;
 
     public class Lead
     {
@@ -57,31 +74,49 @@
         public string? Notes     { get; set; }
     }
 
-    protected override Task OnInitializedAsync() => Refresh();
-
-    private async Task Refresh()
+    private async Task<GridData<Lead>> LoadServerData(GridState<Lead> state)
     {
-        _loading = true;
-        try { _items = await Crm.GetListAsync<Lead>("/api/leads") ?? new(); }
-        catch (Exception ex) { Snackbar.Add($"Load failed: {ex.Message}", Severity.Error); }
-        finally { _loading = false; }
+        var sort = state.SortDefinitions.FirstOrDefault();
+        try
+        {
+            var result = await Crm.GetPagedAsync<Lead>(
+                "/api/leads", state.Page + 1, state.PageSize,
+                sort?.SortBy?.ToLowerInvariant(), sort?.Descending ?? false, _search,
+                new Dictionary<string, string?> { ["status"] = _statusFilter });
+            return new GridData<Lead> { Items = result?.Items ?? new(), TotalItems = result?.TotalCount ?? 0 };
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Load failed: {ex.Message}", Severity.Error);
+
+
+
+            return new GridData<Lead> { Items = new List<Lead>(), TotalItems = 0 };
+
+
+
+        }
     }
+
+    private Task OnSearchChanged() => _grid?.ReloadServerData() ?? Task.CompletedTask;
+
+    private static Color StatusColor(string? s) => s switch
+    {
+        "Contacted" => Color.Info,
+        "Qualified" => Color.Success,
+        "Lost"      => Color.Error,
+        "Converted" => Color.Secondary,
+        _           => Color.Default
+    };
 
     private async Task OpenDialogAsync(Lead? existing)
     {
         var model = existing is null ? null : new LeadDialog.Model
         {
-            Id        = existing.Id,
-            FirstName = existing.FirstName ?? "",
-            LastName  = existing.LastName  ?? "",
-            Email     = existing.Email     ?? "",
-            Phone     = existing.Phone,
-            Company   = existing.Company,
-            Status    = existing.Status ?? "New",
-            Source    = existing.Source,
-            Notes     = existing.Notes
+            Id = existing.Id, FirstName = existing.FirstName ?? "", LastName = existing.LastName ?? "",
+            Email = existing.Email ?? "", Phone = existing.Phone, Company = existing.Company,
+            Status = existing.Status ?? "New", Source = existing.Source, Notes = existing.Notes
         };
-
         var parameters = new DialogParameters { ["Existing"] = model };
         var dlg = await DialogService.ShowAsync<LeadDialog>(existing is null ? "New Lead" : "Edit Lead", parameters);
         var res = await dlg.Result;
@@ -90,35 +125,21 @@
         var req = (LeadDialog.Model)res.Data!;
         HttpResponseMessage r;
         if (req.Id == 0)
-            r = await Crm.PostAsync("/api/leads", new
-            {
-                firstName = req.FirstName, lastName = req.LastName, email = req.Email,
-                phone = req.Phone, company = req.Company, source = req.Source, notes = req.Notes
-            });
+            r = await Crm.PostAsync("/api/leads", new { firstName = req.FirstName, lastName = req.LastName, email = req.Email, phone = req.Phone, company = req.Company, source = req.Source, notes = req.Notes });
         else
-            r = await Crm.PutAsync($"/api/leads/{req.Id}", new
-            {
-                id = req.Id,
-                firstName = req.FirstName, lastName = req.LastName, email = req.Email,
-                phone = req.Phone, company = req.Company, status = req.Status,
-                source = req.Source, notes = req.Notes
-            });
+            r = await Crm.PutAsync($"/api/leads/{req.Id}", new { id = req.Id, firstName = req.FirstName, lastName = req.LastName, email = req.Email, phone = req.Phone, company = req.Company, status = req.Status, source = req.Source, notes = req.Notes });
 
-        Snackbar.Add(r.IsSuccessStatusCode
-            ? (req.Id == 0 ? "Lead created" : "Lead updated")
-            : $"Failed: {await r.Content.ReadAsStringAsync()}",
+        Snackbar.Add(r.IsSuccessStatusCode ? (req.Id == 0 ? "Lead created" : "Lead updated") : $"Failed: {await r.Content.ReadAsStringAsync()}",
             r.IsSuccessStatusCode ? Severity.Success : Severity.Error);
-        if (r.IsSuccessStatusCode) await Refresh();
+        if (r.IsSuccessStatusCode) await (_grid?.ReloadServerData() ?? Task.CompletedTask);
     }
 
     private async Task DeleteAsync(int id)
     {
-        var ok = await DialogService.ShowMessageBox("Delete lead?", "This action cannot be undone.",
-                                                    yesText: "Delete", cancelText: "Cancel");
+        var ok = await DialogService.ShowMessageBox("Delete lead?", "This action cannot be undone.", yesText: "Delete", cancelText: "Cancel");
         if (ok != true) return;
         var r = await Crm.DeleteAsync($"/api/leads/{id}");
-        Snackbar.Add(r.IsSuccessStatusCode ? "Deleted" : "Failed",
-                     r.IsSuccessStatusCode ? Severity.Success : Severity.Error);
-        await Refresh();
+        Snackbar.Add(r.IsSuccessStatusCode ? "Deleted" : "Failed", r.IsSuccessStatusCode ? Severity.Success : Severity.Error);
+        if (r.IsSuccessStatusCode) await (_grid?.ReloadServerData() ?? Task.CompletedTask);
     }
 }

@@ -13,7 +13,11 @@ public class UsersController : ControllerBase
     public UsersController(IMediator mediator) => _mediator = mediator;
 
     [HttpGet]
-    public async Task<IActionResult> GetAll() => Ok(await _mediator.Send(new GetUsersQuery()));
+    public async Task<IActionResult> GetAll(
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 20,
+        [FromQuery] string? sortBy = null, [FromQuery] bool sortDesc = false,
+        [FromQuery] string? search = null, [FromQuery] string? role = null)
+        => Ok(await _mediator.Send(new GetUsersQuery(page, pageSize, sortBy, sortDesc, search, role)));
 
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id)

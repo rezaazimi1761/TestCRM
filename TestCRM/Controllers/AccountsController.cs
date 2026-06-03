@@ -13,7 +13,11 @@ public class AccountsController : ControllerBase
     public AccountsController(IMediator mediator) => _mediator = mediator;
 
     [HttpGet]
-    public async Task<IActionResult> GetAll() => Ok(await _mediator.Send(new GetAccountsQuery()));
+    public async Task<IActionResult> GetAll(
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 20,
+        [FromQuery] string? sortBy = null, [FromQuery] bool sortDesc = false,
+        [FromQuery] string? search = null)
+        => Ok(await _mediator.Send(new GetAccountsQuery(page, pageSize, sortBy, sortDesc, search)));
 
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id)

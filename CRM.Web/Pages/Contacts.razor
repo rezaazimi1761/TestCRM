@@ -1,4 +1,4 @@
-﻿@page "/contacts"
+@page "/contacts"
 @attribute [Authorize]
 @inject CrmApiClient Crm
 @inject ISnackbar Snackbar
@@ -6,49 +6,52 @@
 
 <PageTitle>Contacts</PageTitle>
 
-<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4">
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-3">
     <MudIcon Icon="@Icons.Material.Filled.Contacts" Size="Size.Large" Color="Color.Primary" />
     <MudText Typo="Typo.h4">Contacts</MudText>
     <MudSpacer />
+    <MudTextField @bind-Value="_search" Placeholder="Search name, email, company…"
+                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                  Immediate="true" DebounceInterval="350"
+                  OnDebounceIntervalElapsed="OnSearchChanged"
+                  Variant="Variant.Outlined" Margin="Margin.Dense"
+                  Style="min-width:260px" />
     <MudButton Variant="Variant.Filled" Color="Color.Primary"
-               StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => OpenDialogAsync(null))">
+               StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => OpenDialogAsync(null))" Class="ml-2">
         New Contact
     </MudButton>
-    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Refresh"
-               OnClick="Refresh" Class="ml-2">Refresh</MudButton>
 </MudStack>
 
-<MudTable Items="_items" Hover="true" Dense="true" Striped="true" Loading="_loading">
-    <HeaderContent>
-        <MudTh>First Name</MudTh>
-        <MudTh>Last Name</MudTh>
-        <MudTh>Email</MudTh>
-        <MudTh>Phone</MudTh>
-        <MudTh>Company</MudTh>
-        <MudTh>Actions</MudTh>
-    </HeaderContent>
-    <RowTemplate>
-        <MudTd>@context.FirstName</MudTd>
-        <MudTd>@context.LastName</MudTd>
-        <MudTd>@context.Email</MudTd>
-        <MudTd>@context.Phone</MudTd>
-        <MudTd>@context.Company</MudTd>
-        <MudTd>
-            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small"
-                           OnClick="@(() => OpenDialogAsync(context))" />
-            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
-                           OnClick="@(() => DeleteAsync(context.Id))" />
-        </MudTd>
-    </RowTemplate>
-</MudTable>
+<MudDataGrid T="Contact" @ref="_grid" ServerData="LoadServerData"
+             Hover="true" Dense="true" Striped="true" SortMode="SortMode.Single" Filterable="false">
+    <Columns>
+        <PropertyColumn Property="x => x.FirstName" Title="First Name" />
+        <PropertyColumn Property="x => x.LastName"  Title="Last Name" />
+        <PropertyColumn Property="x => x.Email"     Title="Email" />
+        <PropertyColumn Property="x => x.Phone"     Title="Phone"     Sortable="false" />
+        <PropertyColumn Property="x => x.Company"   Title="Company" />
+        <PropertyColumn Property="x => x.JobTitle"  Title="Job Title" Sortable="false" />
+        <TemplateColumn Title="Actions" Sortable="false">
+            <CellTemplate>
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small"
+                               OnClick="@(() => OpenDialogAsync(context.Item))" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
+                               OnClick="@(() => DeleteAsync(context.Item.Id))" />
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+    <PagerContent>
+        <MudDataGridPager T="Contact" PageSizeOptions="new[]{10,20,50,100}" />
+    </PagerContent>
+</MudDataGrid>
 
 @code {
-    private List<Contact> _items = new();
-    private bool _loading;
+    private MudDataGrid<Contact>? _grid;
+    private string? _search;
 
     public class Contact
     {
-        public int     Id       { get; set; }
+        public int     Id        { get; set; }
         public string? FirstName { get; set; }
         public string? LastName  { get; set; }
         public string? Email     { get; set; }
@@ -58,15 +61,30 @@
         public string? Notes     { get; set; }
     }
 
-    protected override Task OnInitializedAsync() => Refresh();
-
-    private async Task Refresh()
+    private async Task<GridData<Contact>> LoadServerData(GridState<Contact> state)
     {
-        _loading = true;
-        try { _items = await Crm.GetListAsync<Contact>("/api/contacts") ?? new(); }
-        catch (Exception ex) { Snackbar.Add($"Load failed: {ex.Message}", Severity.Error); }
-        finally { _loading = false; }
+        var sort = state.SortDefinitions.FirstOrDefault();
+        try
+        {
+            var result = await Crm.GetPagedAsync<Contact>(
+                "/api/contacts", state.Page + 1, state.PageSize,
+                sort?.SortBy?.ToLowerInvariant(), sort?.Descending ?? false, _search);
+            return new GridData<Contact> { Items = result?.Items ?? new(), TotalItems = result?.TotalCount ?? 0 };
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Load failed: {ex.Message}", Severity.Error);
+
+
+
+            return new GridData<Contact> { Items = new List<Contact>(), TotalItems = 0 };
+
+
+
+        }
     }
+
+    private Task OnSearchChanged() => _grid?.ReloadServerData() ?? Task.CompletedTask;
 
     private async Task OpenDialogAsync(Contact? existing)
     {
@@ -81,7 +99,6 @@
             JobTitle  = existing.JobTitle,
             Notes     = existing.Notes
         };
-
         var parameters = new DialogParameters { ["Existing"] = model };
         var dlg = await DialogService.ShowAsync<ContactDialog>(existing is null ? "New Contact" : "Edit Contact", parameters);
         var res = await dlg.Result;
@@ -90,34 +107,21 @@
         var req = (ContactDialog.Model)res.Data!;
         HttpResponseMessage r;
         if (req.Id == 0)
-            r = await Crm.PostAsync("/api/contacts", new
-            {
-                firstName = req.FirstName, lastName = req.LastName, email = req.Email,
-                phone = req.Phone, company = req.Company, jobTitle = req.JobTitle, notes = req.Notes
-            });
+            r = await Crm.PostAsync("/api/contacts", new { firstName = req.FirstName, lastName = req.LastName, email = req.Email, phone = req.Phone, company = req.Company, jobTitle = req.JobTitle, notes = req.Notes });
         else
-            r = await Crm.PutAsync($"/api/contacts/{req.Id}", new
-            {
-                id = req.Id,
-                firstName = req.FirstName, lastName = req.LastName, email = req.Email,
-                phone = req.Phone, company = req.Company, jobTitle = req.JobTitle, notes = req.Notes
-            });
+            r = await Crm.PutAsync($"/api/contacts/{req.Id}", new { id = req.Id, firstName = req.FirstName, lastName = req.LastName, email = req.Email, phone = req.Phone, company = req.Company, jobTitle = req.JobTitle, notes = req.Notes });
 
-        Snackbar.Add(r.IsSuccessStatusCode
-            ? (req.Id == 0 ? "Contact created" : "Contact updated")
-            : $"Failed: {await r.Content.ReadAsStringAsync()}",
+        Snackbar.Add(r.IsSuccessStatusCode ? (req.Id == 0 ? "Contact created" : "Contact updated") : $"Failed: {await r.Content.ReadAsStringAsync()}",
             r.IsSuccessStatusCode ? Severity.Success : Severity.Error);
-        if (r.IsSuccessStatusCode) await Refresh();
+        if (r.IsSuccessStatusCode) await (_grid?.ReloadServerData() ?? Task.CompletedTask);
     }
 
     private async Task DeleteAsync(int id)
     {
-        var ok = await DialogService.ShowMessageBox("Delete contact?", "This action cannot be undone.",
-                                                    yesText: "Delete", cancelText: "Cancel");
+        var ok = await DialogService.ShowMessageBox("Delete contact?", "This action cannot be undone.", yesText: "Delete", cancelText: "Cancel");
         if (ok != true) return;
         var res = await Crm.DeleteAsync($"/api/contacts/{id}");
-        Snackbar.Add(res.IsSuccessStatusCode ? "Deleted" : "Failed",
-                     res.IsSuccessStatusCode ? Severity.Success : Severity.Error);
-        await Refresh();
+        Snackbar.Add(res.IsSuccessStatusCode ? "Deleted" : "Failed", res.IsSuccessStatusCode ? Severity.Success : Severity.Error);
+        if (res.IsSuccessStatusCode) await (_grid?.ReloadServerData() ?? Task.CompletedTask);
     }
 }

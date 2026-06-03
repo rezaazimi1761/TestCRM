@@ -13,7 +13,13 @@ public class ActivitiesController : ControllerBase
     public ActivitiesController(IMediator mediator) => _mediator = mediator;
 
     [HttpGet]
-    public async Task<IActionResult> GetAll() => Ok(await _mediator.Send(new GetActivitiesQuery()));
+    public async Task<IActionResult> GetAll(
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 20,
+        [FromQuery] string? sortBy = null, [FromQuery] bool sortDesc = false,
+        [FromQuery] string? search = null,
+        [FromQuery] string? type = null,
+        [FromQuery] bool? isCompleted = null)
+        => Ok(await _mediator.Send(new GetActivitiesQuery(page, pageSize, sortBy, sortDesc, search, type, isCompleted)));
 
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id)
