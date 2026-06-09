@@ -8,10 +8,10 @@ using TestCRM.Infrastructure.Persistence;
 namespace TestCRM.Application.Features.Users.Commands;
 
 public record CreateUserCommand(
-    [property: Required(AllowEmptyStrings = false)] [property: StringLength(100)] string FirstName,
-    [property: Required(AllowEmptyStrings = false)] [property: StringLength(100)] string LastName,
-    [property: Required(AllowEmptyStrings = false)] [property: EmailAddress] [property: StringLength(255)] string Email,
-    [property: Required(AllowEmptyStrings = false)] [property: StringLength(128, MinimumLength = 6, ErrorMessage = "Password must be 6–128 characters.")] string Password,
+    [Required(AllowEmptyStrings = false)] [StringLength(100)] string FirstName,
+    [Required(AllowEmptyStrings = false)] [StringLength(100)] string LastName,
+    [Required(AllowEmptyStrings = false)] [EmailAddress] [StringLength(255)] string Email,
+    [Required(AllowEmptyStrings = false)] [StringLength(128, MinimumLength = 6, ErrorMessage = "Password must be 6–128 characters.")] string Password,
     string Role = "User"
 ) : IRequest<int>;
 
@@ -25,7 +25,6 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, int>
     {
         var email = request.Email.Trim().ToLower();
 
-        // Duplicate email check (per tenant — query filter already scopes to current tenant)
         if (await _db.Users.AnyAsync(u => u.Email.ToLower() == email, cancellationToken))
             throw new DuplicateEmailException($"A user with email '{email}' already exists in this tenant.");
 

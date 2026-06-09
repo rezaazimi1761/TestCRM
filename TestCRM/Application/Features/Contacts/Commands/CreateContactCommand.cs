@@ -8,13 +8,13 @@ using TestCRM.Infrastructure.Persistence;
 namespace TestCRM.Application.Features.Contacts.Commands;
 
 public record CreateContactCommand(
-    [property: Required(AllowEmptyStrings = false)] [property: StringLength(100)] string FirstName,
-    [property: Required(AllowEmptyStrings = false)] [property: StringLength(100)] string LastName,
-    [property: Required(AllowEmptyStrings = false)] [property: EmailAddress] [property: StringLength(255)] string Email,
-    [property: StringLength(50)]  string? Phone,
-    [property: StringLength(255)] string? Company,
-    [property: StringLength(150)] string? JobTitle,
-    [property: StringLength(2000)] string? Notes
+    [Required(AllowEmptyStrings = false)] [StringLength(100)] string FirstName,
+    [Required(AllowEmptyStrings = false)] [StringLength(100)] string LastName,
+    [Required(AllowEmptyStrings = false)] [EmailAddress] [StringLength(255)] string Email,
+    [StringLength(50)]   string? Phone,
+    [StringLength(255)]  string? Company,
+    [StringLength(150)]  string? JobTitle,
+    [StringLength(2000)] string? Notes
 ) : IRequest<int>;
 
 public class CreateContactCommandHandler : IRequestHandler<CreateContactCommand, int>
@@ -26,7 +26,6 @@ public class CreateContactCommandHandler : IRequestHandler<CreateContactCommand,
     {
         var email = r.Email.Trim().ToLower();
 
-        // Duplicate email check (per tenant — query filter already scopes to current tenant)
         if (await _db.Contacts.AnyAsync(c => c.Email.ToLower() == email, ct))
             throw new DuplicateEmailException($"A contact with email '{email}' already exists in this tenant.");
 
