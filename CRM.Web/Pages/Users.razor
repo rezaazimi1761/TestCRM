@@ -163,7 +163,7 @@
         if (!authResp.IsSuccessStatusCode)
         {
             _createStep = null;
-            Snackbar.Add($"Auth failed ({(int)authResp.StatusCode}): {await authResp.Content.ReadAsStringAsync()}", Severity.Error);
+            Snackbar.Add($"Auth failed ({(int)authResp.StatusCode}): {await ApiErrorReader.ReadAsync(authResp)}", Severity.Error);
             return;
         }
 
@@ -177,7 +177,7 @@
         });
 
         _createStep = null;
-        Snackbar.Add(crmResp.IsSuccessStatusCode ? "User created in Auth + CRM ✓" : $"Auth OK but CRM failed: {await crmResp.Content.ReadAsStringAsync()}",
+        Snackbar.Add(crmResp.IsSuccessStatusCode ? "User created in Auth + CRM ✓" : $"Auth OK but CRM failed: {await ApiErrorReader.ReadAsync(crmResp)}",
             crmResp.IsSuccessStatusCode ? Severity.Success : Severity.Warning);
         await (_grid?.ReloadServerData() ?? Task.CompletedTask);
     }
@@ -189,7 +189,7 @@
             id = req.Id, firstName = req.FirstName, lastName = req.LastName,
             email = req.Email, role = req.Role, isActive = req.IsActive
         });
-        Snackbar.Add(r.IsSuccessStatusCode ? "User updated ✓" : $"Update failed: {await r.Content.ReadAsStringAsync()}",
+        Snackbar.Add(r.IsSuccessStatusCode ? "User updated ✓" : $"Update failed: {await ApiErrorReader.ReadAsync(r)}",
             r.IsSuccessStatusCode ? Severity.Success : Severity.Error);
         if (r.IsSuccessStatusCode) await (_grid?.ReloadServerData() ?? Task.CompletedTask);
     }

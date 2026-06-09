@@ -45,7 +45,23 @@ builder.Services.AddRateLimiter(opts =>
 builder.Services.AddControllers()
     .AddJsonOptions(o =>
         o.JsonSerializerOptions.Converters.Add(
-            new System.Text.Json.Serialization.JsonStringEnumConverter()));
+            new System.Text.Json.Serialization.JsonStringEnumConverter()))
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        // Return a simple { "message": "..." } instead of the verbose
+        // ValidationProblemDetails JSON so the Blazor frontend can display it cleanly.
+        options.InvalidModelStateResponseFactory = ctx =>
+        {
+            var firstError = ctx.ModelState
+                .Where(e => e.Value?.Errors.Count > 0)
+                .SelectMany(e => e.Value!.Errors)
+                .Select(e => e.ErrorMessage)
+                .FirstOrDefault() ?? "Validation failed.";
+
+            return new Microsoft.AspNetCore.Mvc.BadRequestObjectResult(
+                new { message = firstError });
+        };
+    });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {

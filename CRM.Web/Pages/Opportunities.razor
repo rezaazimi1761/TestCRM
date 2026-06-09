@@ -132,7 +132,7 @@
         else
             r = await Crm.PutAsync($"/api/opportunities/{req.Id}", new { id = req.Id, title = req.Title, value = req.Value, stage = req.Stage, expectedCloseDate = req.ExpectedCloseDate, notes = req.Notes });
 
-        Snackbar.Add(r.IsSuccessStatusCode ? (req.Id == 0 ? "Opportunity created" : "Opportunity updated") : $"Failed: {await r.Content.ReadAsStringAsync()}",
+        Snackbar.Add(r.IsSuccessStatusCode ? (req.Id == 0 ? "Opportunity created" : "Opportunity updated") : $"Failed: {await ApiErrorReader.ReadAsync(r)}",
             r.IsSuccessStatusCode ? Severity.Success : Severity.Error);
         if (r.IsSuccessStatusCode) await (_grid?.ReloadServerData() ?? Task.CompletedTask);
     }

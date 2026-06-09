@@ -158,7 +158,7 @@
             assignedToUserId = req.AssignedToUserId, dueDate = req.DueDate,
             category = req.Category, notes = req.Notes
         });
-        Snackbar.Add(r.IsSuccessStatusCode ? "Ticket created ✓" : $"Failed: {await r.Content.ReadAsStringAsync()}",
+        Snackbar.Add(r.IsSuccessStatusCode ? "Ticket created ✓" : $"Failed: {await ApiErrorReader.ReadAsync(r)}",
                      r.IsSuccessStatusCode ? Severity.Success : Severity.Error);
         if (r.IsSuccessStatusCode) await (_grid?.ReloadServerData() ?? Task.CompletedTask);
     }
@@ -173,7 +173,7 @@
             assignedToUserId = req.AssignedToUserId, dueDate = req.DueDate,
             resolvedAt = req.ResolvedAt, category = req.Category, notes = req.Notes
         });
-        Snackbar.Add(r.IsSuccessStatusCode ? "Ticket updated ✓" : $"Failed: {await r.Content.ReadAsStringAsync()}",
+        Snackbar.Add(r.IsSuccessStatusCode ? "Ticket updated ✓" : $"Failed: {await ApiErrorReader.ReadAsync(r)}",
                      r.IsSuccessStatusCode ? Severity.Success : Severity.Error);
         if (r.IsSuccessStatusCode) await (_grid?.ReloadServerData() ?? Task.CompletedTask);
     }
