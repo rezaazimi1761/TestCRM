@@ -1,3 +1,4 @@
+using TestCRM.Application.Common;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Shared.Application.Models;
@@ -26,7 +27,7 @@ public class GetActivitiesQueryHandler : IRequestHandler<GetActivitiesQuery, Pag
 
     public async Task<PagedResult<ActivityDto>> Handle(GetActivitiesQuery r, CancellationToken ct)
     {
-        var pageSize = Math.Min(r.PageSize, 100);
+        var pageSize = Math.Min(r.PageSize, PaginationValidator.MaxPageSize);
         var q = _db.Activities
             .Include(a => a.Contact)
             .AsQueryable();

@@ -8,7 +8,7 @@ namespace TestCRM.Application.Common;
 /// </summary>
 public static class PaginationValidator
 {
-    public const int MaxPageSize = 100;
+    public const int MaxPageSize = 500;
 
     /// <summary>
     /// Returns a BadRequestObjectResult if values are invalid, null otherwise.

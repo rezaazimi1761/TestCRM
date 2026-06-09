@@ -1,3 +1,4 @@
+using TestCRM.Application.Common;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Shared.Application.Models;
@@ -26,7 +27,7 @@ public class GetLeadsQueryHandler : IRequestHandler<GetLeadsQuery, PagedResult<L
 
     public async Task<PagedResult<LeadDto>> Handle(GetLeadsQuery r, CancellationToken ct)
     {
-        var pageSize = Math.Min(r.PageSize, 100);
+        var pageSize = Math.Min(r.PageSize, PaginationValidator.MaxPageSize);
         var q = _db.Leads.AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(r.Search))

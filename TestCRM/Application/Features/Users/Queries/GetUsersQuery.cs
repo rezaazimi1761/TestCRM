@@ -1,3 +1,4 @@
+using TestCRM.Application.Common;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Shared.Application.Models;
@@ -25,7 +26,7 @@ public class GetUsersQueryHandler : IRequestHandler<GetUsersQuery, PagedResult<U
 
     public async Task<PagedResult<UserDto>> Handle(GetUsersQuery r, CancellationToken ct)
     {
-        var pageSize = Math.Min(r.PageSize, 100);
+        var pageSize = Math.Min(r.PageSize, PaginationValidator.MaxPageSize);
 
         var q = _db.Users.AsQueryable();
 

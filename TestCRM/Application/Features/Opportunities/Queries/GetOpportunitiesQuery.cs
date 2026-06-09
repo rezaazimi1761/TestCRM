@@ -1,3 +1,4 @@
+using TestCRM.Application.Common;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Shared.Application.Models;
@@ -26,7 +27,7 @@ public class GetOpportunitiesQueryHandler : IRequestHandler<GetOpportunitiesQuer
 
     public async Task<PagedResult<OpportunityDto>> Handle(GetOpportunitiesQuery r, CancellationToken ct)
     {
-        var pageSize = Math.Min(r.PageSize, 100);
+        var pageSize = Math.Min(r.PageSize, PaginationValidator.MaxPageSize);
         var q = _db.Opportunities
             .Include(o => o.Account)
             .Include(o => o.Contact)

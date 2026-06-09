@@ -97,8 +97,8 @@
     {
         try
         {
-            var at = Crm.GetPagedAsync<TicketDialog.AccountItem>("/api/accounts", 1, 1000);
-            var ct = Crm.GetPagedAsync<TicketDialog.ContactItem>("/api/contacts", 1, 1000);
+            var at = Crm.GetPagedAsync<TicketDialog.AccountItem>("/api/accounts", 1, 500);
+            var ct = Crm.GetPagedAsync<TicketDialog.ContactItem>("/api/contacts", 1, 500);
             await Task.WhenAll(at, ct);
             _accounts = at.Result?.Items ?? new();
             _contacts = ct.Result?.Items ?? new();

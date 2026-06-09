@@ -231,7 +231,7 @@
         var accountsTask = Crm.GetPagedAsync<object>("/api/accounts", 1, 1);
         var leadsTask    = Crm.GetPagedAsync<object>("/api/leads",    1, 1);
         var oppsTask     = Crm.GetPagedAsync<object>("/api/opportunities", 1, 1);
-        var ticketsTask  = Crm.GetPagedAsync<TicketSummary>("/api/tickets", 1, 1000);
+        var ticketsTask  = Crm.GetPagedAsync<TicketSummary>("/api/tickets", 1, 500);
 
         await Task.WhenAll(contactsTask, accountsTask, leadsTask, oppsTask, ticketsTask);
 

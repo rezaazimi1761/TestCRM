@@ -1,3 +1,4 @@
+using TestCRM.Application.Common;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Shared.Application.Models;
@@ -23,7 +24,7 @@ public class GetAccountsQueryHandler : IRequestHandler<GetAccountsQuery, PagedRe
 
     public async Task<PagedResult<AccountDto>> Handle(GetAccountsQuery r, CancellationToken ct)
     {
-        var pageSize = Math.Min(r.PageSize, 100);
+        var pageSize = Math.Min(r.PageSize, PaginationValidator.MaxPageSize);
         var q = _db.Accounts.AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(r.Search))
