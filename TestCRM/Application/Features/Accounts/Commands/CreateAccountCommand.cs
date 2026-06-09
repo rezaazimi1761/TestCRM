@@ -1,10 +1,20 @@
+using System.ComponentModel.DataAnnotations;
 using MediatR;
 using TestCRM.Domain.Entities;
 using TestCRM.Infrastructure.Persistence;
 
 namespace TestCRM.Application.Features.Accounts.Commands;
 
-public record CreateAccountCommand(string Name, string? Industry, string? Website, string? Phone, string? Address, string? Notes) : IRequest<int>;
+public record CreateAccountCommand(
+    [property: Required(AllowEmptyStrings = false, ErrorMessage = "Name is required.")]
+    [property: StringLength(255, MinimumLength = 1, ErrorMessage = "Name must be 1–255 characters.")]
+    string Name,
+    [property: StringLength(100)] string? Industry,
+    [property: StringLength(500)] string? Website,
+    [property: StringLength(50)]  string? Phone,
+    [property: StringLength(500)] string? Address,
+    [property: StringLength(2000)] string? Notes
+) : IRequest<int>;
 
 public class CreateAccountCommandHandler : IRequestHandler<CreateAccountCommand, int>
 {
@@ -13,7 +23,19 @@ public class CreateAccountCommandHandler : IRequestHandler<CreateAccountCommand,
 
     public async Task<int> Handle(CreateAccountCommand r, CancellationToken ct)
     {
-        var entity = new Account { Name = r.Name, Industry = r.Industry, Website = r.Website, Phone = r.Phone, Address = r.Address, Notes = r.Notes };
+        var trimmedName = r.Name.Trim();
+        if (string.IsNullOrWhiteSpace(trimmedName))
+            throw new ValidationException("Name cannot be empty or whitespace.");
+
+        var entity = new Account
+        {
+            Name     = trimmedName,
+            Industry = r.Industry?.Trim(),
+            Website  = r.Website?.Trim(),
+            Phone    = r.Phone?.Trim(),
+            Address  = r.Address?.Trim(),
+            Notes    = r.Notes?.Trim()
+        };
         _db.Accounts.Add(entity);
         await _db.SaveChangesAsync(ct);
         return entity.Id;

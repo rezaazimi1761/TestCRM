@@ -6,25 +6,32 @@ using TestCRM.Infrastructure.Persistence;
 
 namespace TestCRM.Application.Features.Leads.Queries;
 
+public record LeadDto(
+    int Id, string FirstName, string LastName,
+    string Email, string? Phone, string? Company,
+    string? Source, LeadStatus Status, string? Notes,
+    int? AssignedToUserId, DateTime CreatedAt, DateTime? UpdatedAt);
+
 public record GetLeadsQuery(
     int Page = 1, int PageSize = 20,
     string? SortBy = null, bool SortDesc = false,
     string? Search = null,
     string? Status = null
-) : IRequest<PagedResult<Lead>>;
+) : IRequest<PagedResult<LeadDto>>;
 
-public class GetLeadsQueryHandler : IRequestHandler<GetLeadsQuery, PagedResult<Lead>>
+public class GetLeadsQueryHandler : IRequestHandler<GetLeadsQuery, PagedResult<LeadDto>>
 {
     private readonly AppDbContext _db;
     public GetLeadsQueryHandler(AppDbContext db) => _db = db;
 
-    public async Task<PagedResult<Lead>> Handle(GetLeadsQuery r, CancellationToken ct)
+    public async Task<PagedResult<LeadDto>> Handle(GetLeadsQuery r, CancellationToken ct)
     {
+        var pageSize = Math.Min(r.PageSize, 100);
         var q = _db.Leads.AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(r.Search))
         {
-            var s = r.Search.ToLower();
+            var s = r.Search.Trim().ToLower();
             q = q.Where(l =>
                 l.FirstName.ToLower().Contains(s) ||
                 l.LastName.ToLower().Contains(s)  ||
@@ -41,15 +48,19 @@ public class GetLeadsQueryHandler : IRequestHandler<GetLeadsQuery, PagedResult<L
 
         q = r.SortBy switch
         {
-            "lastName" => r.SortDesc ? q.OrderByDescending(l => l.LastName) : q.OrderBy(l => l.LastName),
-            "email"    => r.SortDesc ? q.OrderByDescending(l => l.Email)    : q.OrderBy(l => l.Email),
-            "company"  => r.SortDesc ? q.OrderByDescending(l => l.Company)  : q.OrderBy(l => l.Company),
-            "status"   => r.SortDesc ? q.OrderByDescending(l => l.Status)   : q.OrderBy(l => l.Status),
-            "source"   => r.SortDesc ? q.OrderByDescending(l => l.Source)   : q.OrderBy(l => l.Source),
-            _          => r.SortDesc ? q.OrderByDescending(l => l.FirstName): q.OrderBy(l => l.FirstName),
+            "lastname"  => r.SortDesc ? q.OrderByDescending(l => l.LastName)  : q.OrderBy(l => l.LastName),
+            "email"     => r.SortDesc ? q.OrderByDescending(l => l.Email)     : q.OrderBy(l => l.Email),
+            "company"   => r.SortDesc ? q.OrderByDescending(l => l.Company)   : q.OrderBy(l => l.Company),
+            "status"    => r.SortDesc ? q.OrderByDescending(l => l.Status)    : q.OrderBy(l => l.Status),
+            "source"    => r.SortDesc ? q.OrderByDescending(l => l.Source)    : q.OrderBy(l => l.Source),
+            _           => r.SortDesc ? q.OrderByDescending(l => l.FirstName) : q.OrderBy(l => l.FirstName),
         };
 
-        var items = await q.Skip((r.Page - 1) * r.PageSize).Take(r.PageSize).ToListAsync(ct);
-        return new PagedResult<Lead>(items, total, r.Page, r.PageSize);
+        var items = await q
+            .Skip((r.Page - 1) * pageSize).Take(pageSize)
+            .Select(l => new LeadDto(l.Id, l.FirstName, l.LastName, l.Email, l.Phone, l.Company, l.Source, l.Status, l.Notes, l.AssignedToUserId, l.CreatedAt, l.UpdatedAt))
+            .ToListAsync(ct);
+
+        return new PagedResult<LeadDto>(items, total, r.Page, pageSize);
     }
 }

@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using TestCRM.Application.Common;
 using TestCRM.Application.Features.Leads.Commands;
 using TestCRM.Application.Features.Leads.Queries;
 
@@ -17,7 +18,10 @@ public class LeadsController : ControllerBase
         [FromQuery] int page = 1, [FromQuery] int pageSize = 20,
         [FromQuery] string? sortBy = null, [FromQuery] bool sortDesc = false,
         [FromQuery] string? search = null, [FromQuery] string? status = null)
-        => Ok(await _mediator.Send(new GetLeadsQuery(page, pageSize, sortBy, sortDesc, search, status)));
+    {
+        if (PaginationValidator.ValidateOrBadRequest(page, pageSize) is { } err) return err;
+        return Ok(await _mediator.Send(new GetLeadsQuery(page, pageSize, sortBy, sortDesc, search, status)));
+    }
 
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id)

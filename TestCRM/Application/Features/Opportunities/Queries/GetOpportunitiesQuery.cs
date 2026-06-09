@@ -26,6 +26,7 @@ public class GetOpportunitiesQueryHandler : IRequestHandler<GetOpportunitiesQuer
 
     public async Task<PagedResult<OpportunityDto>> Handle(GetOpportunitiesQuery r, CancellationToken ct)
     {
+        var pageSize = Math.Min(r.PageSize, 100);
         var q = _db.Opportunities
             .Include(o => o.Account)
             .Include(o => o.Contact)
@@ -50,12 +51,12 @@ public class GetOpportunitiesQueryHandler : IRequestHandler<GetOpportunitiesQuer
         {
             "value"             => r.SortDesc ? q.OrderByDescending(o => o.Value)             : q.OrderBy(o => o.Value),
             "stage"             => r.SortDesc ? q.OrderByDescending(o => o.Stage)             : q.OrderBy(o => o.Stage),
-            "expectedCloseDate" => r.SortDesc ? q.OrderByDescending(o => o.ExpectedCloseDate) : q.OrderBy(o => o.ExpectedCloseDate),
+            "expectedclosedate" => r.SortDesc ? q.OrderByDescending(o => o.ExpectedCloseDate) : q.OrderBy(o => o.ExpectedCloseDate),
             _                   => r.SortDesc ? q.OrderByDescending(o => o.Title)             : q.OrderBy(o => o.Title),
         };
 
         var items = await q
-            .Skip((r.Page - 1) * r.PageSize).Take(r.PageSize)
+            .Skip((r.Page - 1) * pageSize).Take(pageSize)
             .Select(o => new OpportunityDto(
                 o.Id, o.Title, o.Value, o.Stage.ToString(),
                 o.AccountId, o.Account != null ? o.Account.Name : null,
@@ -63,6 +64,6 @@ public class GetOpportunitiesQueryHandler : IRequestHandler<GetOpportunitiesQuer
                 o.AssignedToUserId, o.ExpectedCloseDate, o.Notes))
             .ToListAsync(ct);
 
-        return new PagedResult<OpportunityDto>(items, total, r.Page, r.PageSize);
+        return new PagedResult<OpportunityDto>(items, total, r.Page, pageSize);
     }
 }

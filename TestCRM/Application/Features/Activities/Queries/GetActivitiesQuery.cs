@@ -26,6 +26,7 @@ public class GetActivitiesQueryHandler : IRequestHandler<GetActivitiesQuery, Pag
 
     public async Task<PagedResult<ActivityDto>> Handle(GetActivitiesQuery r, CancellationToken ct)
     {
+        var pageSize = Math.Min(r.PageSize, 100);
         var q = _db.Activities
             .Include(a => a.Contact)
             .AsQueryable();
@@ -57,13 +58,13 @@ public class GetActivitiesQueryHandler : IRequestHandler<GetActivitiesQuery, Pag
         };
 
         var items = await q
-            .Skip((r.Page - 1) * r.PageSize).Take(r.PageSize)
+            .Skip((r.Page - 1) * pageSize).Take(pageSize)
             .Select(a => new ActivityDto(
                 a.Id, a.Subject, a.Type.ToString(), a.Description,
                 a.ContactId, a.Contact != null ? a.Contact.FirstName + " " + a.Contact.LastName : null,
                 a.AssignedToUserId, a.DueDate, a.IsCompleted))
             .ToListAsync(ct);
 
-        return new PagedResult<ActivityDto>(items, total, r.Page, r.PageSize);
+        return new PagedResult<ActivityDto>(items, total, r.Page, pageSize);
     }
 }

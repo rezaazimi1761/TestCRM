@@ -1,3 +1,5 @@
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using Shared.Application.Interfaces;
@@ -8,6 +10,9 @@ using Shared.Infrastructure.Services;
 using TestCRM.Infrastructure.ServiceInstance;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// ── Kestrel: suppress "Server: Kestrel" response header ────────
+builder.WebHost.ConfigureKestrel(o => o.AddServerHeader = false);
 
 // ── HttpContext / Tenant ────────────────────────────────────────
 builder.Services.AddHttpContextAccessor();
@@ -22,6 +27,19 @@ builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<Pr
 
 // ── gRPC client to AuthService ──────────────────────────────────
 builder.Services.AddSingleton<IAuthGrpcClient, AuthGrpcClient>();
+
+// ── Rate Limiting (fixed window: 200 req / 10 s per IP) ─────────
+builder.Services.AddRateLimiter(opts =>
+{
+    opts.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    opts.AddFixedWindowLimiter("api", o =>
+    {
+        o.Window            = TimeSpan.FromSeconds(10);
+        o.PermitLimit       = 200;
+        o.QueueLimit        = 0;
+        o.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+    });
+});
 
 // ── REST + Swagger ──────────────────────────────────────────────
 builder.Services.AddControllers()
@@ -73,10 +91,13 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+// ── Rate limiting ───────────────────────────────────────────────
+app.UseRateLimiter();
+
 // ── Custom JWT middleware (validates via AuthService gRPC) ───────
 app.UseMiddleware<JwtAuthMiddleware>();
 
 app.UseAuthorization();
-app.MapControllers();
+app.MapControllers().RequireRateLimiting("api");
 
 app.Run();

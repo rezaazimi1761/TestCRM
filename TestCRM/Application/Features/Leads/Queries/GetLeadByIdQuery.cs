@@ -1,17 +1,19 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using TestCRM.Domain.Entities;
 using TestCRM.Infrastructure.Persistence;
 
 namespace TestCRM.Application.Features.Leads.Queries;
 
-public record GetLeadByIdQuery(int Id) : IRequest<Lead?>;
+public record GetLeadByIdQuery(int Id) : IRequest<LeadDto?>;
 
-public class GetLeadByIdQueryHandler : IRequestHandler<GetLeadByIdQuery, Lead?>
+public class GetLeadByIdQueryHandler : IRequestHandler<GetLeadByIdQuery, LeadDto?>
 {
     private readonly AppDbContext _db;
     public GetLeadByIdQueryHandler(AppDbContext db) => _db = db;
 
-    public Task<Lead?> Handle(GetLeadByIdQuery request, CancellationToken ct)
-        => _db.Leads.FirstOrDefaultAsync(l => l.Id == request.Id, ct);
+    public Task<LeadDto?> Handle(GetLeadByIdQuery request, CancellationToken ct)
+        => _db.Leads
+            .Where(l => l.Id == request.Id)
+            .Select(l => new LeadDto(l.Id, l.FirstName, l.LastName, l.Email, l.Phone, l.Company, l.Source, l.Status, l.Notes, l.AssignedToUserId, l.CreatedAt, l.UpdatedAt))
+            .FirstOrDefaultAsync(ct);
 }

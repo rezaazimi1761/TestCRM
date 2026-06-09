@@ -29,6 +29,7 @@ public class GetTicketsQueryHandler : IRequestHandler<GetTicketsQuery, PagedResu
 
     public async Task<PagedResult<TicketDto>> Handle(GetTicketsQuery r, CancellationToken ct)
     {
+        var pageSize = Math.Min(r.PageSize, 100);
         var q = _db.Tickets
             .Include(t => t.Account)
             .AsQueryable();
@@ -63,7 +64,7 @@ public class GetTicketsQueryHandler : IRequestHandler<GetTicketsQuery, PagedResu
         };
 
         var items = await q
-            .Skip((r.Page - 1) * r.PageSize).Take(r.PageSize)
+            .Skip((r.Page - 1) * pageSize).Take(pageSize)
             .Select(t => new TicketDto(
                 t.Id, t.Subject, t.Description,
                 t.Status, t.Priority,
@@ -73,6 +74,6 @@ public class GetTicketsQueryHandler : IRequestHandler<GetTicketsQuery, PagedResu
                 t.Category, t.Notes))
             .ToListAsync(ct);
 
-        return new PagedResult<TicketDto>(items, total, r.Page, r.PageSize);
+        return new PagedResult<TicketDto>(items, total, r.Page, pageSize);
     }
 }

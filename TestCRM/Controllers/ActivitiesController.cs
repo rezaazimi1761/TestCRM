@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using TestCRM.Application.Common;
 using TestCRM.Application.Features.Activities.Commands;
 using TestCRM.Application.Features.Activities.Queries;
 
@@ -19,7 +20,10 @@ public class ActivitiesController : ControllerBase
         [FromQuery] string? search = null,
         [FromQuery] string? type = null,
         [FromQuery] bool? isCompleted = null)
-        => Ok(await _mediator.Send(new GetActivitiesQuery(page, pageSize, sortBy, sortDesc, search, type, isCompleted)));
+    {
+        if (PaginationValidator.ValidateOrBadRequest(page, pageSize) is { } err) return err;
+        return Ok(await _mediator.Send(new GetActivitiesQuery(page, pageSize, sortBy, sortDesc, search, type, isCompleted)));
+    }
 
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id)
