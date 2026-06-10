@@ -18,6 +18,11 @@ namespace TestCRM.Migrations
                 nullable: false,
                 defaultValue: "");
 
+            // Back-fill: existing users get their email as username so the
+            // unique index below can be created without duplicate empty strings.
+            migrationBuilder.Sql(
+                "UPDATE [Users] SET [Username] = LOWER([Email]) WHERE [Username] = ''");
+
             migrationBuilder.CreateTable(
                 name: "InboxState",
                 columns: table => new
