@@ -71,8 +71,8 @@ builder.Services.AddMassTransit(x =>
         {
             // Retry: 3 attempts with increasing delays.
             // After the 3rd failure MassTransit automatically publishes
-            // Fault<UserCreatedEvent> to RabbitMQ — TestCRM consumes it
-            // and soft-deletes the pending CRM user (compensation).
+            // Fault<UserCreatedEvent> — TestCRM UserCreatedFaultConsumer
+            // receives it and soft-deletes the pending CRM user.
             e.UseMessageRetry(r => r.Intervals(
                 TimeSpan.FromSeconds(5),
                 TimeSpan.FromSeconds(15),
@@ -81,6 +81,10 @@ builder.Services.AddMassTransit(x =>
             // Inbox: InboxState + AppUser insert in ONE transaction.
             // Consumer throw → rollback → retry (InboxState not committed).
             e.UseEntityFrameworkOutbox<AuthDbContext>(ctx);
+
+            // Ensure Fault<UserCreatedEvent> is published after all retries fail.
+            // PublishFaults = true (default), but explicit here for clarity.
+            e.PublishFaults = true;
 
             e.ConfigureConsumer<UserCreatedConsumer>(ctx);
         });

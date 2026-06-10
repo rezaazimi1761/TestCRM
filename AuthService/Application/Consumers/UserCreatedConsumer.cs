@@ -75,11 +75,10 @@ public class UserCreatedConsumer : IConsumer<UserCreatedEvent>
             Role         = evt.Role,
             IsActive     = true
         });
-
         // SaveChanges + InboxState committed in ONE transaction (UseEntityFrameworkOutbox).
         // If this throws → full rollback → MassTransit retries.
         await _db.SaveChangesAsync(ct);
-
+        
         // ── Notify TestCRM of success ────────────────────────────────
         // This publish goes through AuthService's own outbox tables,
         // so it is also delivered reliably even if RabbitMQ is momentarily down.

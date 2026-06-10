@@ -58,13 +58,23 @@ builder.Services.AddMassTransit(x =>
             h.Password(rb["Password"] ?? "guest");
         });
 
-        // Receive endpoint for AuthService → TestCRM callbacks.
-        // Both Synced and Fault messages land here.
-        cfg.ReceiveEndpoint("testcrm-auth-callbacks", e =>
+        // ── Endpoint 1: UserAuthSyncedEvent (success callback) ──────
+        // Uses Outbox/Inbox — the DB update must be transactional.
+        cfg.ReceiveEndpoint("testcrm-auth-synced", e =>
         {
             e.UseMessageRetry(r => r.Interval(3, TimeSpan.FromSeconds(5)));
             e.UseEntityFrameworkOutbox<AppDbContext>(ctx);
             e.ConfigureConsumer<UserAuthSyncedConsumer>(ctx);
+        });
+
+        // ── Endpoint 2: Fault<UserCreatedEvent> (failure callback) ──
+        // Intentionally WITHOUT UseEntityFrameworkOutbox — Fault<T> is published
+        // by MassTransit infrastructure (not the consumer), so wrapping in an
+        // outbox transaction causes the binding to be missed.
+        // The compensation (soft-delete) is a simple UPDATE, no outbox needed.
+        cfg.ReceiveEndpoint("testcrm-user-created-fault", e =>
+        {
+            e.UseMessageRetry(r => r.Interval(3, TimeSpan.FromSeconds(5)));
             e.ConfigureConsumer<UserCreatedFaultConsumer>(ctx);
         });
     });
