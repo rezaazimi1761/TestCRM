@@ -1,8 +1,6 @@
 @page "/users"
 @attribute [Authorize]
 @inject CrmApiClient Crm
-@inject AuthAdminClient AuthAdmin
-@inject AuthStateProvider AuthState
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 @inject AuthenticationStateProvider AuthStateProvider
@@ -32,13 +30,6 @@
         New User
     </MudButton>
 </MudStack>
-
-@if (_createStep is not null)
-{
-    <MudAlert Severity="Severity.Info" Class="mb-3" Dense="true" Icon="@Icons.Material.Rounded.Info">
-        @_createStep
-    </MudAlert>
-}
 
 <MudDataGrid T="AppUser" @ref="_grid" ServerData="LoadServerData"
              Hover="true" Dense="true" Striped="true" SortMode="SortMode.Single" Filterable="false">
@@ -87,8 +78,6 @@
     private MudDataGrid<AppUser>? _grid;
     private string? _search;
     private string? _roleFilter;
-    private string? _createStep;
-
     public class AppUser
     {
         public int     Id        { get; set; }
@@ -148,38 +137,26 @@
 
     private async Task CreateUserAsync(UserDialog.Model req)
     {
-        var tenantId = await AuthState.GetTenantAsync();
-        if (string.IsNullOrWhiteSpace(tenantId)) { Snackbar.Add("Could not determine current tenant.", Severity.Error); return; }
-
-        _createStep = "Step 1 / 2 — Creating auth account…";
-        StateHasChanged();
-
-        var authResp = await AuthAdmin.PostAsync("/api/auth/register", new
+        // Single API call — TestCRM saves the user and publishes UserCreatedEvent
+        // via the EF Core Outbox. AuthService receives the event and creates
+        // the auth account asynchronously (guaranteed by Outbox + Inbox pattern).
+        var r = await Crm.PostAsync("/api/users", new
         {
-            tenantId = tenantId, username = req.Username, email = req.Email,
-            firstName = req.FirstName, lastName = req.LastName, password = req.Password, role = req.Role
+            username  = req.Username,
+            firstName = req.FirstName,
+            lastName  = req.LastName,
+            email     = req.Email,
+            password  = req.Password,
+            role      = req.Role
         });
 
-        if (!authResp.IsSuccessStatusCode)
-        {
-            _createStep = null;
-            Snackbar.Add($"Auth failed ({(int)authResp.StatusCode}): {await ApiErrorReader.ReadAsync(authResp)}", Severity.Error);
-            return;
-        }
+        Snackbar.Add(r.IsSuccessStatusCode
+            ? "User created ✓ — auth account will be ready in seconds"
+            : $"Failed: {await ApiErrorReader.ReadAsync(r)}",
+            r.IsSuccessStatusCode ? Severity.Success : Severity.Error);
 
-        _createStep = "Step 2 / 2 — Creating CRM profile…";
-        StateHasChanged();
-
-        var crmResp = await Crm.PostAsync("/api/users", new
-        {
-            firstName = req.FirstName, lastName = req.LastName,
-            email = req.Email, password = req.Password, role = req.Role
-        });
-
-        _createStep = null;
-        Snackbar.Add(crmResp.IsSuccessStatusCode ? "User created in Auth + CRM ✓" : $"Auth OK but CRM failed: {await ApiErrorReader.ReadAsync(crmResp)}",
-            crmResp.IsSuccessStatusCode ? Severity.Success : Severity.Warning);
-        await (_grid?.ReloadServerData() ?? Task.CompletedTask);
+        if (r.IsSuccessStatusCode)
+            await (_grid?.ReloadServerData() ?? Task.CompletedTask);
     }
 
     private async Task UpdateUserAsync(UserDialog.Model req)

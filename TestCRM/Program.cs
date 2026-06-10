@@ -1,4 +1,5 @@
 using System.Threading.RateLimiting;
+using MassTransit;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
@@ -24,6 +25,33 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 // ── MediatR ─────────────────────────────────────────────────────
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<Program>());
+
+// ── MassTransit + RabbitMQ + EF Core Outbox ─────────────────────
+// Outbox guarantees: UserCreatedEvent is written to OutboxMessage table
+// in the SAME transaction as the AppUser insert. The OutboxDeliveryService
+// background worker reads pending rows and forwards them to RabbitMQ.
+// If the app crashes before delivery, the message survives in SQL Server
+// and is retried on next startup — no user creation is lost.
+builder.Services.AddMassTransit(x =>
+{
+    // EF Core Outbox — publisher side only (no consumers in TestCRM)
+    x.AddEntityFrameworkOutbox<AppDbContext>(o =>
+    {
+        o.UseSqlServer();
+        o.QueryDelay = TimeSpan.FromSeconds(2);
+    });
+
+    x.UsingRabbitMq((ctx, cfg) =>
+    {
+        var rb = builder.Configuration.GetSection("RabbitMQ");
+        cfg.Host(rb["Host"] ?? "rabbitmq://localhost", h =>
+        {
+            h.Username(rb["Username"] ?? "guest");
+            h.Password(rb["Password"] ?? "guest");
+        });
+        cfg.ConfigureEndpoints(ctx);
+    });
+});
 
 // ── gRPC client to AuthService ──────────────────────────────────
 builder.Services.AddSingleton<IAuthGrpcClient, AuthGrpcClient>();

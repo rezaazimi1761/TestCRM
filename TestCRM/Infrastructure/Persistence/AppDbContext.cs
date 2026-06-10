@@ -1,8 +1,8 @@
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Shared.Application.Interfaces;
 using Shared.Domain.Common;
 using TestCRM.Domain.Entities;
-using static Grpc.Core.Metadata;
 
 namespace TestCRM.Infrastructure.Persistence;
 
@@ -30,10 +30,15 @@ public class AppDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
+        // ── MassTransit Outbox tables (no tenant filter — infrastructure tables) ──
+        modelBuilder.AddInboxStateEntity();
+        modelBuilder.AddOutboxMessageEntity();
+        modelBuilder.AddOutboxStateEntity();
+
         modelBuilder.Entity<AppUser>(entity =>
         {
-            entity.HasIndex(u => new { u.Email, u.TenantId })
-            .IsUnique();
+            entity.HasIndex(u => new { u.Email,    u.TenantId }).IsUnique();
+            entity.HasIndex(u => new { u.Username, u.TenantId }).IsUnique();
             entity.HasQueryFilter(e => e.TenantId == _currentTenant && !e.IsDeleted);
         });
         modelBuilder.Entity<Contact>(entity =>

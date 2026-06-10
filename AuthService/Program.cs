@@ -1,6 +1,8 @@
 using System.Text;
+using AuthService.Application.Consumers;
 using AuthService.Infrastructure.Persistence;
 using AuthService.Services;
+using MassTransit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -37,6 +39,45 @@ builder.Services.AddAuthorization();
 // ── App Services ───────────────────────────────────────────────
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IClaimManagerService, ClaimManagerService>();
+
+// ── MassTransit + RabbitMQ + EF Core Inbox ──────────────────────
+// Inbox guarantees: each UserCreatedEvent is processed exactly once.
+// MassTransit records the MessageId in InboxState. If the message is
+// delivered twice (at-least-once delivery), the second attempt is a no-op.
+// The consumer + DB write happen inside one transaction — if the consumer
+// throws, the InboxState row is NOT committed and the message is retried.
+builder.Services.AddMassTransit(x =>
+{
+    x.AddConsumer<UserCreatedConsumer>();
+
+    // EF Core Inbox — wraps each consumer invocation in a transaction
+    // that commits InboxState + the consumer's own DB changes atomically.
+    x.AddEntityFrameworkOutbox<AuthDbContext>(o =>
+    {
+        o.UseSqlServer();
+        o.QueryDelay = TimeSpan.FromSeconds(2);
+    });
+
+    x.UsingRabbitMq((ctx, cfg) =>
+    {
+        var rb = builder.Configuration.GetSection("RabbitMQ");
+        cfg.Host(rb["Host"] ?? "rabbitmq://localhost", h =>
+        {
+            h.Username(rb["Username"] ?? "guest");
+            h.Password(rb["Password"] ?? "guest");
+        });
+
+        // Configure receive endpoint with Inbox for idempotent delivery
+        cfg.ReceiveEndpoint("authservice-user-created", e =>
+        {
+            // Inbox: wraps consumer + DB write in one transaction.
+            // InboxState row is committed atomically with the auth user insert.
+            // If the consumer throws, neither is committed — message retried.
+            e.UseEntityFrameworkOutbox<AuthDbContext>(ctx);
+            e.ConfigureConsumer<UserCreatedConsumer>(ctx);
+        });
+    });
+});
 
 // ── gRPC ───────────────────────────────────────────────────────
 builder.Services.AddGrpc();

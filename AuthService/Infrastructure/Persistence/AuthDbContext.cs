@@ -1,4 +1,5 @@
 using AuthService.Domain.Entities;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 
 namespace AuthService.Infrastructure.Persistence;
@@ -15,6 +16,11 @@ public class AuthDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder mb)
     {
+        // ── MassTransit Inbox table (idempotency / deduplication) ──
+        mb.AddInboxStateEntity();
+        mb.AddOutboxMessageEntity();
+        mb.AddOutboxStateEntity();
+
         // ── ServiceInstance ────────────────────────────────────────
         mb.Entity<ServiceInstance>(e =>
         {
