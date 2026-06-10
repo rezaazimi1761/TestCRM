@@ -60,6 +60,21 @@
                          Color="@(context.Item.IsActive ? Color.Success : Color.Error)" Size="Size.Small" />
             </CellTemplate>
         </TemplateColumn>
+        <TemplateColumn Title="Auth Sync" SortBy="@(new Func<AppUser,object?>(x => x.AuthSyncStatus))">
+            <CellTemplate>
+                @{
+                    var (icon, color, tip) = context.Item.AuthSyncStatus switch
+                    {
+                        "Synced"  => (Icons.Material.Rounded.CheckCircle,  Color.Success, "Auth account ready"),
+                        "Failed"  => (Icons.Material.Rounded.ErrorOutline, Color.Error,   "Auth sync failed — user deleted"),
+                        _         => (Icons.Material.Rounded.HourglassTop, Color.Warning, "Waiting for AuthService…")
+                    };
+                }
+                <MudTooltip Text="@tip">
+                    <MudIcon Icon="@icon" Color="@color" Size="Size.Small" />
+                </MudTooltip>
+            </CellTemplate>
+        </TemplateColumn>
         <TemplateColumn Title="Actions" Sortable="false">
             <CellTemplate>
                 <MudIconButton Icon="@Icons.Material.Rounded.Edit" Color="Color.Primary" Size="Size.Small"
@@ -80,13 +95,14 @@
     private string? _roleFilter;
     public class AppUser
     {
-        public int     Id        { get; set; }
-        public string? Username  { get; set; }
-        public string? FirstName { get; set; }
-        public string? LastName  { get; set; }
-        public string? Email     { get; set; }
-        public string? Role      { get; set; }
-        public bool    IsActive  { get; set; }
+        public int     Id             { get; set; }
+        public string? Username       { get; set; }
+        public string? FirstName      { get; set; }
+        public string? LastName       { get; set; }
+        public string? Email          { get; set; }
+        public string? Role           { get; set; }
+        public bool    IsActive       { get; set; }
+        public string  AuthSyncStatus { get; set; } = "Pending";
     }
 
     private async Task<GridData<AppUser>> LoadServerData(GridState<AppUser> state)

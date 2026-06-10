@@ -7,21 +7,20 @@ using Shared.Contracts.Events;
 namespace AuthService.Application.Consumers;
 
 /// <summary>
-/// Consumes <see cref="UserCreatedEvent"/> published by TestCRM and creates
-/// the corresponding auth account in AuthService's own database.
+/// Consumes UserCreatedEvent (published by TestCRM) and creates the auth account.
 ///
-/// Inbox pattern guarantees idempotency: if the message is delivered more than
-/// once (e.g. after a crash + retry), the second attempt is a no-op because
-/// MassTransit records the MessageId in the InboxState table and skips
-/// reprocessing for already-handled messages.
+/// Retry policy (configured on receive endpoint in Program.cs):
+///   3 attempts — 5s / 15s / 30s intervals.
+///   Each attempt rolls back fully on failure (Inbox transaction).
+///   After all retries fail → MassTransit auto-publishes Fault&lt;UserCreatedEvent&gt;
+///   → TestCRM FaultConsumer receives it → soft-deletes the CRM user.
 ///
-/// The consumer also handles the race-condition case where the username or
-/// email already exists (previous partial success) by logging a warning and
-/// completing successfully rather than throwing — preventing infinite retries.
+/// On success → publishes UserAuthSyncedEvent
+///   → TestCRM SyncedConsumer receives it → marks AuthSyncStatus = "Synced".
 /// </summary>
 public class UserCreatedConsumer : IConsumer<UserCreatedEvent>
 {
-    private readonly AuthDbContext _db;
+    private readonly AuthDbContext               _db;
     private readonly ILogger<UserCreatedConsumer> _logger;
 
     public UserCreatedConsumer(AuthDbContext db, ILogger<UserCreatedConsumer> logger)
@@ -33,52 +32,62 @@ public class UserCreatedConsumer : IConsumer<UserCreatedEvent>
     public async Task Consume(ConsumeContext<UserCreatedEvent> context)
     {
         var evt = context.Message;
+        var ct  = context.CancellationToken;
 
-        // Verify the tenant exists in AuthService
+        // ── Tenant check ────────────────────────────────────────────
+        // Throw → MassTransit retries → after all retries Fault is published
+        // → TestCRM compensates by soft-deleting the pending user.
         var tenant = await _db.Tenants
-            .FirstOrDefaultAsync(t => t.Slug == evt.TenantId && t.IsActive);
+            .FirstOrDefaultAsync(t => t.Slug == evt.TenantId && t.IsActive, ct);
 
         if (tenant is null)
-        {
-            // Tenant missing — likely a timing issue during seeding.
-            // Throw so MassTransit retries; eventually the tenant will exist.
             throw new InvalidOperationException(
-                $"[UserCreatedConsumer] Tenant '{evt.TenantId}' not found or inactive. " +
-                "Will retry.");
-        }
+                $"Tenant '{evt.TenantId}' not found or inactive.");
 
-        // Idempotency guard — if auth user was already created (e.g. on retry
-        // after the consumer committed but the ack was lost), skip silently.
+        // ── Idempotency guard ───────────────────────────────────────
+        // Duplicate delivery (ack lost after commit): skip insert, still publish Synced.
         var exists = await _db.Users.AnyAsync(
             u => u.TenantId == evt.TenantId &&
-                 (u.Username == evt.Username || u.Email == evt.Email));
+                 (u.Username == evt.Username || u.Email == evt.Email), ct);
 
         if (exists)
         {
             _logger.LogWarning(
-                "[UserCreatedConsumer] Auth user for tenant={TenantId} username={Username} " +
-                "already exists — duplicate delivery, skipping.",
+                "[UserCreatedConsumer] Duplicate delivery — auth user already exists. " +
+                "tenant={TenantId} username={Username}",
                 evt.TenantId, evt.Username);
+
+            // Publish Synced so TestCRM converges to correct state on retries.
+            await context.Publish(new UserAuthSyncedEvent(
+                evt.CorrelationId, evt.TenantId, evt.Username), ct);
             return;
         }
 
-        var user = new AppUser
+        // ── Create auth account ─────────────────────────────────────
+        _db.Users.Add(new AppUser
         {
             TenantId     = evt.TenantId,
             Username     = evt.Username,
             Email        = evt.Email,
             FirstName    = evt.FirstName,
             LastName     = evt.LastName,
-            PasswordHash = evt.PasswordHash,   // BCrypt hash from TestCRM — reusable
+            PasswordHash = evt.PasswordHash,   // BCrypt hash — valid in both services
             Role         = evt.Role,
             IsActive     = true
-        };
+        });
 
-        _db.Users.Add(user);
-        await _db.SaveChangesAsync(context.CancellationToken);
+        // SaveChanges + InboxState committed in ONE transaction (UseEntityFrameworkOutbox).
+        // If this throws → full rollback → MassTransit retries.
+        await _db.SaveChangesAsync(ct);
+
+        // ── Notify TestCRM of success ────────────────────────────────
+        // This publish goes through AuthService's own outbox tables,
+        // so it is also delivered reliably even if RabbitMQ is momentarily down.
+        await context.Publish(new UserAuthSyncedEvent(
+            evt.CorrelationId, evt.TenantId, evt.Username), ct);
 
         _logger.LogInformation(
-            "[UserCreatedConsumer] Auth user created: tenant={TenantId} username={Username} role={Role}",
-            evt.TenantId, evt.Username, evt.Role);
+            "[UserCreatedConsumer] Auth user created. tenant={TenantId} username={Username}",
+            evt.TenantId, evt.Username);
     }
 }

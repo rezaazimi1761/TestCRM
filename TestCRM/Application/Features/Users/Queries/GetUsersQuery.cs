@@ -8,8 +8,9 @@ namespace TestCRM.Application.Features.Users.Queries;
 
 /// <summary>Safe projection — never exposes PasswordHash, TenantId, or IsDeleted.</summary>
 public record UserDto(
-    int Id, string FirstName, string LastName,
+    int Id, string Username, string FirstName, string LastName,
     string Email, string Role, bool IsActive,
+    string AuthSyncStatus,
     DateTime CreatedAt, DateTime? UpdatedAt);
 
 public record GetUsersQuery(
@@ -55,7 +56,7 @@ public class GetUsersQueryHandler : IRequestHandler<GetUsersQuery, PagedResult<U
 
         var items = await q
             .Skip((r.Page - 1) * pageSize).Take(pageSize)
-            .Select(u => new UserDto(u.Id, u.FirstName, u.LastName, u.Email, u.Role, u.IsActive, u.CreatedAt, u.UpdatedAt))
+            .Select(u => new UserDto(u.Id, u.Username, u.FirstName, u.LastName, u.Email, u.Role, u.IsActive, u.AuthSyncStatus, u.CreatedAt, u.UpdatedAt))
             .ToListAsync(ct);
 
         return new PagedResult<UserDto>(items, total, r.Page, pageSize);

@@ -67,13 +67,21 @@ builder.Services.AddMassTransit(x =>
             h.Password(rb["Password"] ?? "guest");
         });
 
-        // Configure receive endpoint with Inbox for idempotent delivery
         cfg.ReceiveEndpoint("authservice-user-created", e =>
         {
-            // Inbox: wraps consumer + DB write in one transaction.
-            // InboxState row is committed atomically with the auth user insert.
-            // If the consumer throws, neither is committed — message retried.
+            // Retry: 3 attempts with increasing delays.
+            // After the 3rd failure MassTransit automatically publishes
+            // Fault<UserCreatedEvent> to RabbitMQ — TestCRM consumes it
+            // and soft-deletes the pending CRM user (compensation).
+            e.UseMessageRetry(r => r.Intervals(
+                TimeSpan.FromSeconds(5),
+                TimeSpan.FromSeconds(15),
+                TimeSpan.FromSeconds(30)));
+
+            // Inbox: InboxState + AppUser insert in ONE transaction.
+            // Consumer throw → rollback → retry (InboxState not committed).
             e.UseEntityFrameworkOutbox<AuthDbContext>(ctx);
+
             e.ConfigureConsumer<UserCreatedConsumer>(ctx);
         });
     });

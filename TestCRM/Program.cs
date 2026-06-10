@@ -1,6 +1,7 @@
 using System.Threading.RateLimiting;
 using MassTransit;
 using Microsoft.AspNetCore.RateLimiting;
+using TestCRM.Application.Consumers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using Shared.Application.Interfaces;
@@ -34,15 +35,17 @@ builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<Pr
 // and is retried on next startup — no user creation is lost.
 builder.Services.AddMassTransit(x =>
 {
-    // EF Core Outbox — publisher side only (no consumers in TestCRM)
+    // ── Callback consumers (AuthService → TestCRM) ───────────────
+    x.AddConsumer<UserAuthSyncedConsumer>();    // AuthSyncStatus = Synced
+    x.AddConsumer<UserCreatedFaultConsumer>();  // compensation: soft-delete on failure
+
+    // ── EF Core Outbox (publish) + Inbox tables (consume) ────────
     x.AddEntityFrameworkOutbox<AppDbContext>(o =>
     {
         o.UseSqlServer();
         o.QueryDelay = TimeSpan.FromSeconds(2);
-        // UseBusOutbox routes ALL IBus/IPublishEndpoint calls through the
-        // OutboxMessage table instead of going directly to RabbitMQ.
-        // Without this, IPublishEndpoint tries to connect to RabbitMQ
-        // immediately and blocks/fails when the broker is unavailable.
+        // Routes IPublishEndpoint through OutboxMessage table so the HTTP
+        // handler never blocks waiting for RabbitMQ.
         o.UseBusOutbox();
     });
 
@@ -54,7 +57,16 @@ builder.Services.AddMassTransit(x =>
             h.Username(rb["Username"] ?? "guest");
             h.Password(rb["Password"] ?? "guest");
         });
-        cfg.ConfigureEndpoints(ctx);
+
+        // Receive endpoint for AuthService → TestCRM callbacks.
+        // Both Synced and Fault messages land here.
+        cfg.ReceiveEndpoint("testcrm-auth-callbacks", e =>
+        {
+            e.UseMessageRetry(r => r.Interval(3, TimeSpan.FromSeconds(5)));
+            e.UseEntityFrameworkOutbox<AppDbContext>(ctx);
+            e.ConfigureConsumer<UserAuthSyncedConsumer>(ctx);
+            e.ConfigureConsumer<UserCreatedFaultConsumer>(ctx);
+        });
     });
 });
 
