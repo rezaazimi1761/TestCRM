@@ -39,6 +39,11 @@ builder.Services.AddMassTransit(x =>
     {
         o.UseSqlServer();
         o.QueryDelay = TimeSpan.FromSeconds(2);
+        // UseBusOutbox routes ALL IBus/IPublishEndpoint calls through the
+        // OutboxMessage table instead of going directly to RabbitMQ.
+        // Without this, IPublishEndpoint tries to connect to RabbitMQ
+        // immediately and blocks/fails when the broker is unavailable.
+        o.UseBusOutbox();
     });
 
     x.UsingRabbitMq((ctx, cfg) =>
