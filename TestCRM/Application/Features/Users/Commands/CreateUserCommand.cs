@@ -37,6 +37,9 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, int>
         var email    = request.Email.Trim().ToLower();
         var username = request.Username.Trim().ToLower();
 
+        if (await _db.Users.AnyAsync(u => u.Username.ToLower() == username, ct))
+            throw new ValidationException($"Username '{username}' is already taken in this tenant.");
+
         if (await _db.Users.AnyAsync(u => u.Email.ToLower() == email, ct))
             throw new DuplicateEmailException($"A user with email '{email}' already exists in this tenant.");
 
