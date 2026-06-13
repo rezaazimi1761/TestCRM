@@ -1,4 +1,5 @@
 using AuthService.Domain.Entities;
+using AuthService.Application.Sagas;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,6 +14,7 @@ public class AuthDbContext : DbContext
     public DbSet<AppUser>         Users            { get; set; }
     public DbSet<RefreshToken>    RefreshTokens    { get; set; }
     public DbSet<UserClaim>       UserClaims       { get; set; }
+    public DbSet<UserIntegrationSagaState> UserIntegrationSagas { get; set; }
 
     protected override void OnModelCreating(ModelBuilder mb)
     {
@@ -20,6 +22,16 @@ public class AuthDbContext : DbContext
         mb.AddInboxStateEntity();
         mb.AddOutboxMessageEntity();
         mb.AddOutboxStateEntity();
+
+        mb.Entity<UserIntegrationSagaState>(e =>
+        {
+            e.HasKey(x => x.CorrelationId);
+            e.Property(x => x.CurrentState).HasMaxLength(64).IsRequired();
+            e.Property(x => x.TenantId).HasMaxLength(100).IsRequired();
+            e.Property(x => x.Username).HasMaxLength(100).IsRequired();
+            e.Property(x => x.Operation).HasMaxLength(32).IsRequired();
+            e.HasIndex(x => new { x.AuthUserId, x.TenantId, x.Operation });
+        });
 
         // ── ServiceInstance ────────────────────────────────────────
         mb.Entity<ServiceInstance>(e =>
@@ -60,6 +72,8 @@ public class AuthDbContext : DbContext
             e.Property(x => x.Username).HasMaxLength(100).IsRequired();
             e.Property(x => x.Email   ).HasMaxLength(200).IsRequired();
             e.Property(x => x.Role    ).HasMaxLength(50 ).IsRequired();
+            e.Property(x => x.IntegrationStatus).HasMaxLength(50).IsRequired();
+            e.Property(x => x.IntegrationError ).HasMaxLength(2000);
 
             e.HasOne(x => x.Tenant)
              .WithMany(t => t.Users)

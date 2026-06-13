@@ -19,9 +19,18 @@ public class AppUser
     public bool     IsActive   { get; set; } = true;
     public bool     IsDeleted  { get; set; }
     public DateTime CreatedAt  { get; set; } = DateTime.UtcNow;
+    public string   IntegrationStatus { get; set; } = UserIntegrationStatus.Pending;
+    public string?  IntegrationError  { get; set; }
 
     // ── Navigation ────────────────────────────────────────────────
     public Tenant?   Tenant        { get; set; }
     public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
     public ICollection<UserClaim>    Claims        { get; set; } = new List<UserClaim>();
+}
+
+public static class UserIntegrationStatus
+{
+    public const string Pending = "Pending";
+    public const string Synced  = "Synced";
+    public const string Failed  = "Failed";
 }

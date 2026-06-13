@@ -14,6 +14,6 @@ public class GetUserByIdQueryHandler : IRequestHandler<GetUserByIdQuery, UserDto
     public Task<UserDto?> Handle(GetUserByIdQuery request, CancellationToken ct)
         => _db.Users
             .Where(u => u.Id == request.Id)
-            .Select(u => new UserDto(u.Id, u.Username, u.FirstName, u.LastName, u.Email, u.Role, u.IsActive, u.AuthSyncStatus, u.CreatedAt, u.UpdatedAt))
+            .Select(u => new UserDto(u.Id, u.Username, u.FirstName, u.LastName, u.Email, u.Role, u.IsActive, u.CreatedAt, u.UpdatedAt))
             .FirstOrDefaultAsync(ct);
 }

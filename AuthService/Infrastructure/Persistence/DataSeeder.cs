@@ -88,7 +88,8 @@ public static class DataSeeder
                 LastName     = adminLastName,
                 PasswordHash = BC.HashPassword(adminPassword),
                 Role         = "SuperUser",
-                IsActive     = true
+                IsActive     = true,
+                IntegrationStatus = UserIntegrationStatus.Synced
             };
             db.Users.Add(admin);
             await db.SaveChangesAsync(ct);

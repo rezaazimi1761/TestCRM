@@ -1,6 +1,6 @@
 @page "/users"
 @attribute [Authorize]
-@inject CrmApiClient Crm
+@inject AuthAdminClient AuthApi
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 @inject AuthenticationStateProvider AuthStateProvider
@@ -11,7 +11,7 @@
     <MudIcon Icon="@Icons.Material.Rounded.Group" Size="Size.Large" Color="Color.Primary" />
     <MudText Typo="Typo.h4">Users</MudText>
     <MudSpacer />
-    <MudTextField @bind-Value="_search" Placeholder="Search name, email…"
+    <MudTextField @bind-Value="_search" Placeholder="Search name, email..."
                   Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
                   Immediate="true" DebounceInterval="350"
                   OnDebounceIntervalElapsed="OnSearchChanged"
@@ -45,6 +45,7 @@
                 </MudStack>
             </CellTemplate>
         </TemplateColumn>
+        <PropertyColumn Property="x => x.Username" Title="Username" />
         <PropertyColumn Property="x => x.Email" Title="Email" />
         <TemplateColumn Title="Role" SortBy="@(new Func<AppUser,object?>(x => x.Role))">
             <CellTemplate>
@@ -60,18 +61,17 @@
                          Color="@(context.Item.IsActive ? Color.Success : Color.Error)" Size="Size.Small" />
             </CellTemplate>
         </TemplateColumn>
-        <TemplateColumn Title="Auth Sync" SortBy="@(new Func<AppUser,object?>(x => x.AuthSyncStatus))">
+        <TemplateColumn Title="Sync" SortBy="@(new Func<AppUser,object?>(x => x.IntegrationStatus))">
             <CellTemplate>
                 @{
-                    var (icon, color, tip) = context.Item.AuthSyncStatus switch
-                    {
-                        "Synced"  => (Icons.Material.Rounded.CheckCircle,  Color.Success, "Auth account ready"),
-                        "Failed"  => (Icons.Material.Rounded.ErrorOutline, Color.Error,   "Auth sync failed — user deleted"),
-                        _         => (Icons.Material.Rounded.HourglassTop, Color.Warning, "Waiting for AuthService…")
-                    };
+                    var status = context.Item.IntegrationStatus ?? "Pending";
+                    var color = status == "Synced" ? Color.Success : status == "Failed" ? Color.Error : Color.Warning;
+                    var icon = status == "Synced" ? Icons.Material.Rounded.CheckCircle :
+                               status == "Failed" ? Icons.Material.Rounded.ErrorOutline :
+                               Icons.Material.Rounded.HourglassTop;
                 }
-                <MudTooltip Text="@tip">
-                    <MudIcon Icon="@icon" Color="@color" Size="Size.Small" />
+                <MudTooltip Text="@(context.Item.IntegrationError ?? status)">
+                    <MudChip Size="Size.Small" Color="@color" Icon="@icon">@status</MudChip>
                 </MudTooltip>
             </CellTemplate>
         </TemplateColumn>
@@ -93,16 +93,21 @@
     private MudDataGrid<AppUser>? _grid;
     private string? _search;
     private string? _roleFilter;
+
     public class AppUser
     {
-        public int     Id             { get; set; }
-        public string? Username       { get; set; }
-        public string? FirstName      { get; set; }
-        public string? LastName       { get; set; }
-        public string? Email          { get; set; }
-        public string? Role           { get; set; }
-        public bool    IsActive       { get; set; }
-        public string  AuthSyncStatus { get; set; } = "Pending";
+        public int Id { get; set; }
+        public string? TenantId { get; set; }
+        public string? Username { get; set; }
+        public string? FirstName { get; set; }
+        public string? LastName { get; set; }
+        public string? Email { get; set; }
+        public string? Role { get; set; }
+        public bool IsActive { get; set; }
+        public bool IsDeleted { get; set; }
+        public string? IntegrationStatus { get; set; }
+        public string? IntegrationError { get; set; }
+        public DateTime CreatedAt { get; set; }
     }
 
     private async Task<GridData<AppUser>> LoadServerData(GridState<AppUser> state)
@@ -110,7 +115,7 @@
         var sort = state.SortDefinitions.FirstOrDefault();
         try
         {
-            var result = await Crm.GetPagedAsync<AppUser>(
+            var result = await AuthApi.GetPagedAsync<AppUser>(
                 "/api/users", state.Page + 1, state.PageSize,
                 sort?.SortBy?.ToLowerInvariant(), sort?.Descending ?? false, _search,
                 new Dictionary<string, string?> { ["role"] = _roleFilter });
@@ -119,13 +124,7 @@
         catch (Exception ex)
         {
             Snackbar.Add($"Load failed: {ex.Message}", Severity.Error);
-
-
-
             return new GridData<AppUser> { Items = new List<AppUser>(), TotalItems = 0 };
-
-
-
         }
     }
 
@@ -139,35 +138,38 @@
             LastName = existing.LastName ?? "", Email = existing.Email ?? "",
             Role = existing.Role ?? "User", IsActive = existing.IsActive
         };
-        var authState   = await AuthStateProvider.GetAuthenticationStateAsync();
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         var isSuperUser = authState.User.IsInRole("SuperUser");
-        var parameters  = new DialogParameters { ["Existing"] = model, ["CallerIsSuperUser"] = isSuperUser };
+        var parameters = new DialogParameters { ["Existing"] = model, ["CallerIsSuperUser"] = isSuperUser };
         var dlg = await DialogService.ShowAsync<UserDialog>(existing is null ? "New User" : "Edit User", parameters);
         var res = await dlg.Result;
         if (res is null || res.Canceled) return;
 
         var req = (UserDialog.Model)res.Data!;
         if (req.Id == 0) await CreateUserAsync(req);
-        else             await UpdateUserAsync(req);
+        else await UpdateUserAsync(req);
     }
 
     private async Task CreateUserAsync(UserDialog.Model req)
     {
-        // Single API call — TestCRM saves the user and publishes UserCreatedEvent
-        // via the EF Core Outbox. AuthService receives the event and creates
-        // the auth account asynchronously (guaranteed by Outbox + Inbox pattern).
-        var r = await Crm.PostAsync("/api/users", new
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var tenantId = authState.User.FindFirst("tenant_id")?.Value
+            ?? authState.User.FindFirst("home_tenant_id")?.Value
+            ?? "default";
+
+        var r = await AuthApi.PostAsync("/api/users", new
         {
-            username  = req.Username,
+            tenantId,
+            username = req.Username,
             firstName = req.FirstName,
-            lastName  = req.LastName,
-            email     = req.Email,
-            password  = req.Password,
-            role      = req.Role
+            lastName = req.LastName,
+            email = req.Email,
+            password = req.Password,
+            role = req.Role
         });
 
         Snackbar.Add(r.IsSuccessStatusCode
-            ? "User created ✓ — auth account will be ready in seconds"
+            ? "User created in AuthService; CRM will sync shortly"
             : $"Failed: {await ApiErrorReader.ReadAsync(r)}",
             r.IsSuccessStatusCode ? Severity.Success : Severity.Error);
 
@@ -177,25 +179,34 @@
 
     private async Task UpdateUserAsync(UserDialog.Model req)
     {
-        var r = await Crm.PutAsync($"/api/users/{req.Id}", new
+        var r = await AuthApi.PutAsync($"/api/users/{req.Id}", new
         {
-            id = req.Id, firstName = req.FirstName, lastName = req.LastName,
-            email = req.Email, role = req.Role, isActive = req.IsActive
+            firstName = req.FirstName,
+            lastName = req.LastName,
+            email = req.Email,
+            role = req.Role,
+            isActive = req.IsActive
         });
-        Snackbar.Add(r.IsSuccessStatusCode ? "User updated ✓" : $"Update failed: {await ApiErrorReader.ReadAsync(r)}",
+
+        Snackbar.Add(r.IsSuccessStatusCode ? "User updated" : $"Update failed: {await ApiErrorReader.ReadAsync(r)}",
             r.IsSuccessStatusCode ? Severity.Success : Severity.Error);
-        if (r.IsSuccessStatusCode) await (_grid?.ReloadServerData() ?? Task.CompletedTask);
+
+        if (r.IsSuccessStatusCode)
+            await (_grid?.ReloadServerData() ?? Task.CompletedTask);
     }
 
     private async Task DeleteAsync(int id)
     {
         var ok = await DialogService.ShowMessageBox("Delete user?",
-            "This removes the user from CRM. Auth account must be removed separately.",
+            "This removes the user from AuthService and syncs CRM.",
             yesText: "Delete", cancelText: "Cancel");
         if (ok != true) return;
-        var r = await Crm.DeleteAsync($"/api/users/{id}");
-        Snackbar.Add(r.IsSuccessStatusCode ? "Deleted from CRM" : "Failed",
+
+        var r = await AuthApi.DeleteAsync($"/api/users/{id}");
+        Snackbar.Add(r.IsSuccessStatusCode ? "Deleted" : $"Failed: {await ApiErrorReader.ReadAsync(r)}",
                      r.IsSuccessStatusCode ? Severity.Success : Severity.Error);
-        if (r.IsSuccessStatusCode) await (_grid?.ReloadServerData() ?? Task.CompletedTask);
+
+        if (r.IsSuccessStatusCode)
+            await (_grid?.ReloadServerData() ?? Task.CompletedTask);
     }
 }

@@ -36,8 +36,7 @@ builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<Pr
 builder.Services.AddMassTransit(x =>
 {
     // ── Callback consumers (AuthService → TestCRM) ───────────────
-    x.AddConsumer<UserAuthSyncedConsumer>();    // AuthSyncStatus = Synced
-    x.AddConsumer<UserCreatedFaultConsumer>();  // compensation: soft-delete on failure
+    x.AddConsumer<UserIntegrationConsumer>();
 
     // ── EF Core Outbox (publish) + Inbox tables (consume) ────────
     x.AddEntityFrameworkOutbox<AppDbContext>(o =>
@@ -60,11 +59,11 @@ builder.Services.AddMassTransit(x =>
 
         // ── Endpoint 1: UserAuthSyncedEvent (success callback) ──────
         // Uses Outbox/Inbox — the DB update must be transactional.
-        cfg.ReceiveEndpoint("testcrm-auth-synced", e =>
+        cfg.ReceiveEndpoint("testcrm-user-integration", e =>
         {
             e.UseMessageRetry(r => r.Interval(3, TimeSpan.FromSeconds(5)));
             e.UseEntityFrameworkOutbox<AppDbContext>(ctx);
-            e.ConfigureConsumer<UserAuthSyncedConsumer>(ctx);
+            e.ConfigureConsumer<UserIntegrationConsumer>(ctx);
         });
 
         // ── Endpoint 2: Fault<UserCreatedEvent> (failure callback) ──
@@ -72,11 +71,6 @@ builder.Services.AddMassTransit(x =>
         // by MassTransit infrastructure (not the consumer), so wrapping in an
         // outbox transaction causes the binding to be missed.
         // The compensation (soft-delete) is a simple UPDATE, no outbox needed.
-        cfg.ReceiveEndpoint("testcrm-user-created-fault", e =>
-        {
-            e.UseMessageRetry(r => r.Interval(3, TimeSpan.FromSeconds(5)));
-            e.ConfigureConsumer<UserCreatedFaultConsumer>(ctx);
-        });
     });
 });
 

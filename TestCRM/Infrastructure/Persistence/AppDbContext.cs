@@ -37,6 +37,9 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<AppUser>(entity =>
         {
+            entity.HasIndex(u => new { u.AuthUserId, u.TenantId })
+                .IsUnique()
+                .HasFilter("[AuthUserId] IS NOT NULL");
             entity.HasIndex(u => new { u.Email,    u.TenantId }).IsUnique();
             entity.HasIndex(u => new { u.Username, u.TenantId }).IsUnique();
             entity.HasQueryFilter(e => e.TenantId == _currentTenant && !e.IsDeleted);
@@ -76,7 +79,8 @@ public class AppDbContext : DbContext
             switch (entry.State)
             {
                 case EntityState.Added:
-                    entry.Entity.TenantId = _currentTenant;
+                    if (string.IsNullOrWhiteSpace(entry.Entity.TenantId))
+                        entry.Entity.TenantId = _currentTenant;
                     entry.Entity.CreatedAt = DateTime.UtcNow;
                     break;
                 case EntityState.Modified:

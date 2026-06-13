@@ -1,5 +1,5 @@
 using System.Text;
-using AuthService.Application.Consumers;
+using AuthService.Application.Sagas;
 using AuthService.Infrastructure.Persistence;
 using AuthService.Services;
 using MassTransit;
@@ -10,13 +10,11 @@ using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ── Database ───────────────────────────────────────────────────
 builder.Services.AddDbContext<AuthDbContext>(opt =>
     opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// ── JWT Auth ───────────────────────────────────────────────────
 var jwtSection = builder.Configuration.GetSection("Jwt");
-var key        = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSection["Secret"]!));
+var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSection["Secret"]!));
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(opt =>
@@ -36,26 +34,24 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
-// ── App Services ───────────────────────────────────────────────
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IClaimManagerService, ClaimManagerService>();
 
-// ── MassTransit + RabbitMQ + EF Core Inbox ──────────────────────
-// Inbox guarantees: each UserCreatedEvent is processed exactly once.
-// MassTransit records the MessageId in InboxState. If the message is
-// delivered twice (at-least-once delivery), the second attempt is a no-op.
-// The consumer + DB write happen inside one transaction — if the consumer
-// throws, the InboxState row is NOT committed and the message is retried.
 builder.Services.AddMassTransit(x =>
 {
-    x.AddConsumer<UserCreatedConsumer>();
+    x.AddSagaStateMachine<UserIntegrationStateMachine, UserIntegrationSagaState>()
+        .EntityFrameworkRepository(r =>
+        {
+            r.ConcurrencyMode = ConcurrencyMode.Pessimistic;
+            r.ExistingDbContext<AuthDbContext>();
+            r.UseSqlServer();
+        });
 
-    // EF Core Inbox — wraps each consumer invocation in a transaction
-    // that commits InboxState + the consumer's own DB changes atomically.
     x.AddEntityFrameworkOutbox<AuthDbContext>(o =>
     {
         o.UseSqlServer();
         o.QueryDelay = TimeSpan.FromSeconds(2);
+        o.UseBusOutbox();
     });
 
     x.UsingRabbitMq((ctx, cfg) =>
@@ -67,35 +63,30 @@ builder.Services.AddMassTransit(x =>
             h.Password(rb["Password"] ?? "guest");
         });
 
-        cfg.ReceiveEndpoint("authservice-user-created", e =>
+        cfg.ReceiveEndpoint("auth-user-integration-saga", e =>
         {
-            // Retry: 3 attempts with increasing delays.
-            // After the 3rd failure MassTransit automatically publishes
-            // Fault<UserCreatedEvent> — TestCRM UserCreatedFaultConsumer
-            // receives it and soft-deletes the pending CRM user.
-            e.UseMessageRetry(r => r.Intervals(
-                TimeSpan.FromSeconds(5),
-                TimeSpan.FromSeconds(15),
-                TimeSpan.FromSeconds(30)));
-
-            // Inbox: InboxState + AppUser insert in ONE transaction.
-            // Consumer throw → rollback → retry (InboxState not committed).
+            e.UseMessageRetry(r => r.Interval(3, TimeSpan.FromSeconds(5)));
             e.UseEntityFrameworkOutbox<AuthDbContext>(ctx);
-
-            // Ensure Fault<UserCreatedEvent> is published after all retries fail.
-            // PublishFaults = true (default), but explicit here for clarity.
-            e.PublishFaults = true;
-
-            e.ConfigureConsumer<UserCreatedConsumer>(ctx);
+            e.ConfigureSaga<UserIntegrationSagaState>(ctx);
         });
     });
 });
 
-// ── gRPC ───────────────────────────────────────────────────────
 builder.Services.AddGrpc();
+builder.Services.AddControllers()
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        options.InvalidModelStateResponseFactory = ctx =>
+        {
+            var firstError = ctx.ModelState
+                .Where(e => e.Value?.Errors.Count > 0)
+                .SelectMany(e => e.Value!.Errors)
+                .Select(e => e.ErrorMessage)
+                .FirstOrDefault() ?? "Validation failed.";
 
-// ── REST ───────────────────────────────────────────────────────
-builder.Services.AddControllers();
+            return new Microsoft.AspNetCore.Mvc.BadRequestObjectResult(new { message = firstError });
+        };
+    });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -122,7 +113,6 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-// ── Auto-migrate + seed default tenant & master admin on startup ─
 using (var scope = app.Services.CreateScope())
 {
     var db     = scope.ServiceProvider.GetRequiredService<AuthDbContext>();

@@ -3,7 +3,9 @@ using AuthService.Domain.Entities;
 using AuthService.Infrastructure.Persistence;
 using AuthService.Services;
 using Shared.Contracts.Auth;
+using Shared.Contracts.Events;
 using Shared.Contracts.Tenant;
+using MassTransit;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -18,12 +20,14 @@ public class AuthController : ControllerBase
     private readonly AuthDbContext    _db;
     private readonly IJwtTokenService _jwt;
     private readonly IConfiguration   _cfg;
+    private readonly IPublishEndpoint _bus;
 
-    public AuthController(AuthDbContext db, IJwtTokenService jwt, IConfiguration cfg)
+    public AuthController(AuthDbContext db, IJwtTokenService jwt, IConfiguration cfg, IPublishEndpoint bus)
     {
         _db  = db;
         _jwt = jwt;
         _cfg = cfg;
+        _bus = bus;
     }
 
     // ── POST /api/auth/register ────────────────────────────────────
@@ -49,10 +53,25 @@ public class AuthController : ControllerBase
             FirstName    = req.FirstName,
             LastName     = req.LastName,
             PasswordHash = BC.HashPassword(req.Password),
-            Role         = req.Role
+            Role         = req.Role,
+            IntegrationStatus = UserIntegrationStatus.Pending
         };
+        await using var tx = await _db.Database.BeginTransactionAsync(ct);
         _db.Users.Add(user);
         await _db.SaveChangesAsync(ct);
+        await _bus.Publish(new UserIntegrationEvent(
+            NewId.NextGuid(),
+            UserIntegrationOperation.Created,
+            user.Id,
+            user.TenantId,
+            user.Username,
+            user.Email,
+            user.FirstName,
+            user.LastName,
+            user.Role,
+            user.IsActive), ct);
+        await _db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
         return Ok(new { user.Id, user.Username, user.TenantId });
     }
 

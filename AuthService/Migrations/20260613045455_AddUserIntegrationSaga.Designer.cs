@@ -4,6 +4,7 @@ using AuthService.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AuthService.Migrations
 {
     [DbContext(typeof(AuthDbContext))]
-    partial class AuthDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260613045455_AddUserIntegrationSaga")]
+    partial class AddUserIntegrationSaga
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -41,12 +44,6 @@ namespace AuthService.Migrations
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("FaultReason")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("FaultedAt")
-                        .HasColumnType("datetime2");
 
                     b.Property<string>("Operation")
                         .IsRequired()
@@ -89,15 +86,6 @@ namespace AuthService.Migrations
                     b.Property<string>("FirstName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("IntegrationError")
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
-
-                    b.Property<string>("IntegrationStatus")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");

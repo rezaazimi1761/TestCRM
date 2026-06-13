@@ -10,6 +10,13 @@ public record RegisterRequest(
     string Password,
     string Role = "User");
 
+public record UpdateUserRequest(
+    string FirstName,
+    string LastName,
+    string Email,
+    string Role,
+    bool IsActive);
+
 public record LoginRequest(
     string TenantId,
     string Username,
@@ -34,3 +41,17 @@ public record AuthResponse(
     string   TenantId,
     Guid     ServiceInstanceId,
     string   ApiUrl);
+
+public record UserAdminDto(
+    int Id,
+    string TenantId,
+    string Username,
+    string FirstName,
+    string LastName,
+    string Email,
+    string Role,
+    bool IsActive,
+    bool IsDeleted,
+    string IntegrationStatus,
+    string? IntegrationError,
+    DateTime CreatedAt);
