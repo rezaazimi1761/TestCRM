@@ -10,10 +10,10 @@
     <MudIcon Icon="@Icons.Material.Filled.Dns" Size="Size.Large" Color="Color.Primary" />
     <MudText Typo="Typo.h4">Service Instances</MudText>
     <MudSpacer />
-    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+@*  <MudButton Variant="Variant.Filled" Color="Color.Primary"
                StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => OpenDialogAsync(null))">
         New Instance
-    </MudButton>
+    </MudButton> *@
     <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Refresh"
                OnClick="Refresh" Class="ml-2">Refresh</MudButton>
 </MudStack>
@@ -26,7 +26,7 @@
         <MudTh>Tenants</MudTh>
         <MudTh>Active</MudTh>
         <MudTh>Created</MudTh>
-        <MudTh>Actions</MudTh>
+        @* <MudTh>Actions</MudTh> *@
     </HeaderContent>
     <RowTemplate>
         <MudTd><MudText Typo="Typo.caption">@context.Id.ToString().Substring(0,8)…</MudText></MudTd>
@@ -38,12 +38,12 @@
                      Color="@(context.IsActive ? Color.Success : Color.Error)" />
         </MudTd>
         <MudTd>@context.CreatedAt.ToString("yyyy-MM-dd")</MudTd>
-        <MudTd>
+@*         <MudTd>
             <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small"
                            OnClick="@(() => OpenDialogAsync(context))" />
             <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
                            OnClick="@(() => DeleteAsync(context.Id))" />
-        </MudTd>
+        </MudTd> *@
     </RowTemplate>
 </MudTable>
 

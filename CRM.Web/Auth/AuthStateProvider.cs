@@ -61,7 +61,7 @@ public class AuthStateProvider : AuthenticationStateProvider
             var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
             if (jwt.ValidTo < DateTime.UtcNow) return Anonymous;
 
-            var identity = new ClaimsIdentity(jwt.Claims, "jwt", "unique_name", "role");
+            var identity = new ClaimsIdentity(jwt.Claims, "jwt", "unique_name", ClaimTypes.Role);
             return new AuthenticationState(new ClaimsPrincipal(identity));
         }
         catch
