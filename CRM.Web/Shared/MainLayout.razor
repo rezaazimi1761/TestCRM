@@ -72,7 +72,6 @@
                     <MudNavLink Href="/opportunities" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Rounded.TrendingUp">Opportunities</MudNavLink>
                     <MudNavLink Href="/activities"    Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Rounded.EventNote">Activities</MudNavLink>
                     <MudNavLink Href="/tickets"       Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Rounded.ConfirmationNumber">Tickets</MudNavLink>
-                    <MudNavLink Href="/users"         Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Rounded.Group">Users</MudNavLink>
 
                     @if (context.User.IsInRole("SuperUser"))
                     {
@@ -81,6 +80,7 @@
                                  Style="font-size:10px; letter-spacing:2px; opacity:.4;">
                             ADMIN
                         </MudText>
+                        <MudNavLink Href="/users"             Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Rounded.Group">Users</MudNavLink>
                         <MudNavLink Href="/tenants"           Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Rounded.Domain">Tenants</MudNavLink>
                         <MudNavLink Href="/service-instances" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Rounded.Dns">Service Instances</MudNavLink>
                     }
