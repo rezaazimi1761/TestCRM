@@ -1,3 +1,10 @@
+using ModernCRM.Auth.Api.UserSync;
+using Microsoft.EntityFrameworkCore;
+using MassTransit;
+using ModernCRM.Auth.Api.Services;
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 using ModernCRM.Auth.Application.Handlers;
 using ModernCRM.Auth.Domain.Users;
 using ModernCRM.Auth.Infrastructure.Identity;
@@ -6,10 +13,15 @@ using ModernCRM.Auth.Infrastructure.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var jwtSecret = builder.Configuration["Jwt:Secret"] ?? throw new InvalidOperationException("Jwt:Secret is not configured.");
+if (jwtSecret.Length < 32) throw new InvalidOperationException("Jwt:Secret must contain at least 32 characters.");
+
 builder.Services.AddSingleton<AuthDbContext>();
+builder.Services.AddSingleton<ServiceInstanceStore>();
 builder.Services.AddSingleton<IAuthUserRepository, AuthUserRepository>();
 builder.Services.AddSingleton<ITenantRepository, TenantRepository>();
 builder.Services.AddSingleton<IPasswordHasher, PasswordHasher>();
+builder.Services.AddSingleton<IJwtTokenService, JwtTokenService>();
 
 builder.Services.AddScoped<CreateUserHandler>();
 builder.Services.AddScoped<UpdateUserHandler>();
@@ -20,18 +32,63 @@ builder.Services.AddScoped<CreateTenantHandler>();
 builder.Services.AddScoped<UpdateTenantHandler>();
 builder.Services.AddScoped<GetTenantsHandler>();
 builder.Services.AddScoped<GetTenantByIdHandler>();
+builder.Services.AddDbContext<AuthIntegrationDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddMassTransit(x =>
+{
+    x.AddConsumer<SyncUserToAuthConsumer>();
+    x.AddEntityFrameworkOutbox<AuthIntegrationDbContext>(o =>
+    {
+        o.UseSqlServer();
+        o.QueryDelay = TimeSpan.FromSeconds(1);
+        o.UseBusOutbox();
+    });
+    x.UsingRabbitMq((context, cfg) =>
+    {
+        var rabbit = builder.Configuration.GetSection("RabbitMQ");
+        cfg.Host(rabbit["Host"] ?? "rabbitmq://localhost", h =>
+        {
+            h.Username(rabbit["Username"] ?? "guest");
+            h.Password(rabbit["Password"] ?? "guest");
+        });
+        cfg.ReceiveEndpoint("moderncrm-sync-user-to-auth", e =>
+        {
+            e.UseMessageRetry(r => r.Interval(3, TimeSpan.FromSeconds(5)));
+            e.UseEntityFrameworkOutbox<AuthIntegrationDbContext>(context);
+            e.ConfigureConsumer<SyncUserToAuthConsumer>(context);
+        });
+    });
+});
 
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = builder.Configuration["Jwt:Issuer"],
+        ValidAudience = builder.Configuration["Jwt:Audience"],
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
+        ClockSkew = TimeSpan.Zero
+    };
+});
+builder.Services.AddAuthorization();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+    options.CustomSchemaIds(type => type.FullName?.Replace("+", ".") ?? type.Name));
 
 var app = builder.Build();
-
-if (app.Environment.IsDevelopment())
+using (var scope = app.Services.CreateScope())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    await scope.ServiceProvider.GetRequiredService<AuthIntegrationDbContext>().Database.MigrateAsync();
 }
+await AuthDataSeeder.SeedAsync(app.Services.GetRequiredService<AuthDbContext>(), app.Services.GetRequiredService<IPasswordHasher>(), app.Configuration);
 
+if (app.Environment.IsDevelopment()) { app.UseSwagger(); app.UseSwaggerUI(); }
+app.UseAuthentication();
+app.UseAuthorization();
 app.MapControllers();
 app.Run();

@@ -1,6 +1,6 @@
 @page "/users"
 @attribute [Authorize(Roles = "SuperUser")]
-@inject AuthAdminClient AuthApi
+@inject CrmApiClient Crm
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 @inject AuthenticationStateProvider AuthStateProvider
@@ -115,7 +115,7 @@
         var sort = state.SortDefinitions.FirstOrDefault();
         try
         {
-            var result = await AuthApi.GetPagedAsync<AppUser>(
+            var result = await Crm.GetPagedAsync<AppUser>(
                 "/api/users", state.Page + 1, state.PageSize,
                 sort?.SortBy?.ToLowerInvariant(), sort?.Descending ?? false, _search,
                 new Dictionary<string, string?> { ["role"] = _roleFilter });
@@ -157,7 +157,7 @@
             ?? authState.User.FindFirst("home_tenant_id")?.Value
             ?? "default";
 
-        var r = await AuthApi.PostAsync("/api/users", new
+        var r = await Crm.PostAsync("/api/users", new
         {
             tenantId,
             username = req.Username,
@@ -169,7 +169,7 @@
         });
 
         Snackbar.Add(r.IsSuccessStatusCode
-            ? "User created in AuthService; CRM will sync shortly"
+            ? "User created in CRM; authentication sync is pending"
             : $"Failed: {await ApiErrorReader.ReadAsync(r)}",
             r.IsSuccessStatusCode ? Severity.Success : Severity.Error);
 
@@ -179,7 +179,7 @@
 
     private async Task UpdateUserAsync(UserDialog.Model req)
     {
-        var r = await AuthApi.PutAsync($"/api/users/{req.Id}", new
+        var r = await Crm.PutAsync($"/api/users/{req.Id}", new
         {
             firstName = req.FirstName,
             lastName = req.LastName,
@@ -198,11 +198,11 @@
     private async Task DeleteAsync(int id)
     {
         var ok = await DialogService.ShowMessageBox("Delete user?",
-            "This removes the user from AuthService and syncs CRM.",
+            "This removes the CRM user and synchronizes the deletion with Auth.",
             yesText: "Delete", cancelText: "Cancel");
         if (ok != true) return;
 
-        var r = await AuthApi.DeleteAsync($"/api/users/{id}");
+        var r = await Crm.DeleteAsync($"/api/users/{id}");
         Snackbar.Add(r.IsSuccessStatusCode ? "Deleted" : $"Failed: {await ApiErrorReader.ReadAsync(r)}",
                      r.IsSuccessStatusCode ? Severity.Success : Severity.Error);
 

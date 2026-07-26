@@ -1,22 +1,7 @@
-﻿namespace ModernCRM.SharedKernel.IntegrationEvents;
+namespace ModernCRM.SharedKernel.IntegrationEvents;
 
 public enum UserIntegrationOperation { Created, Updated, Deleted }
-
-public sealed record UserIntegrationEvent(
-    Guid CorrelationId,
-    UserIntegrationOperation Operation,
-    int AuthUserId,
-    string TenantId,
-    string Username,
-    string Email,
-    string FirstName,
-    string LastName,
-    string Role,
-    bool IsActive);
-
-public sealed record UserIntegrationAppliedEvent(
-    Guid CorrelationId,
-    UserIntegrationOperation Operation,
-    int AuthUserId,
-    string TenantId,
-    DateTime AppliedAtUtc);
+public sealed record CrmUserSyncRequested(Guid CorrelationId, UserIntegrationOperation Operation, int CrmUserId, int? AuthUserId, string TenantId, string Username, string Email, string FirstName, string LastName, string Role, bool IsActive, string? Password);
+public sealed record SyncUserToAuth(Guid CorrelationId, UserIntegrationOperation Operation, int CrmUserId, int? AuthUserId, string TenantId, string Username, string Email, string FirstName, string LastName, string Role, bool IsActive, string? Password);
+public sealed record AuthUserSynced(Guid CorrelationId, UserIntegrationOperation Operation, int CrmUserId, int AuthUserId, string TenantId, DateTime SyncedAtUtc);
+public sealed record AuthUserSyncFailed(Guid CorrelationId, int CrmUserId, string TenantId, string Error, DateTime FailedAtUtc);

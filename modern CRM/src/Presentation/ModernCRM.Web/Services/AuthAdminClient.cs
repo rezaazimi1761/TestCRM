@@ -24,7 +24,7 @@ public class AuthAdminClient
     private async Task<HttpClient> BuildAsync()
     {
         var http = _factory.CreateClient("auth-admin");
-        http.BaseAddress = new Uri(_cfg["AuthService:Url"] ?? "http://localhost:5273");
+        http.BaseAddress = new Uri(_cfg["AuthService:Url"] ?? "http://localhost:9041");
         var token = await _auth.GetTokenAsync();
         if (!string.IsNullOrWhiteSpace(token))
             http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);

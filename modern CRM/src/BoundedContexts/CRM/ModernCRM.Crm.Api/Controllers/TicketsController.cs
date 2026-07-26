@@ -1,32 +1,14 @@
 using Microsoft.AspNetCore.Mvc;
-using ModernCRM.Crm.Application.Commands;
-using ModernCRM.Crm.Application.DTO;
-using ModernCRM.Crm.Application.Handlers;
-using ModernCRM.Crm.Application.Queries;
-
+using ModernCRM.Crm.Api.Frontend;
 namespace ModernCRM.Crm.Api.Controllers;
-
-[ApiController]
-[Route("api/tickets")]
-public sealed class TicketsController : ControllerBase
+[ApiController,Route("api/tickets")]
+public sealed class TicketsController(FrontendCrmStore store):ControllerBase
 {
-    [HttpGet]
-    public Task<IReadOnlyList<TicketDto>> GetAll([FromQuery] string tenantId, [FromQuery] string? status, [FromQuery] string? priority, [FromServices] GetTicketsHandler handler, CancellationToken ct)
-        => handler.Handle(new GetTicketsQuery(tenantId, status, priority), ct);
-
-    [HttpGet("{id:int}")]
-    public async Task<IActionResult> GetById(int id, [FromServices] GetTicketByIdHandler handler, CancellationToken ct)
-        => (await handler.Handle(new GetTicketByIdQuery(id), ct)) is { } item ? Ok(item) : NotFound();
-
-    [HttpPost]
-    public async Task<IActionResult> Create([FromBody] CreateTicketCommand command, [FromServices] CreateTicketHandler handler, CancellationToken ct)
-        => Created($"/api/tickets/{await handler.Handle(command, ct)}", null);
-
-    [HttpPut("{id:int}")]
-    public async Task<IActionResult> Update(int id, [FromBody] UpdateTicketCommand command, [FromServices] UpdateTicketHandler handler, CancellationToken ct)
-        => await handler.Handle(command with { Id = id }, ct) ? NoContent() : NotFound();
-
-    [HttpDelete("{id:int}")]
-    public async Task<IActionResult> Delete(int id, [FromServices] DeleteTicketHandler handler, CancellationToken ct)
-        => await handler.Handle(new DeleteTicketCommand(id), ct) ? NoContent() : NotFound();
+ [HttpGet] public IActionResult GetAll(int page=1,int pageSize=20,string? sortBy=null,bool sortDesc=false,string? search=null,string? status=null,string? priority=null){lock(store.SyncRoot){var t=FrontendApi.Tenant(User);var q=store.Tickets.Where(x=>x.TenantId==t&&!x.IsDeleted);if(!string.IsNullOrWhiteSpace(search))q=q.Where(x=>FrontendApi.Contains(x.Subject,search)||FrontendApi.Contains(x.Description,search)||FrontendApi.Contains(x.AccountName,search));if(!string.IsNullOrWhiteSpace(status))q=q.Where(x=>x.Status.Equals(status,StringComparison.OrdinalIgnoreCase));if(!string.IsNullOrWhiteSpace(priority))q=q.Where(x=>x.Priority.Equals(priority,StringComparison.OrdinalIgnoreCase));return Ok(FrontendApi.Page(q,page,pageSize,sortBy,sortDesc));}}
+ [HttpGet("{id:int}")] public IActionResult Get(int id){lock(store.SyncRoot){var x=store.Tickets.FirstOrDefault(x=>x.Id==id&&x.TenantId==FrontendApi.Tenant(User)&&!x.IsDeleted);return x is null?NotFound():Ok(x);}}
+ [HttpPost] public IActionResult Create(Payload r){lock(store.SyncRoot){if(string.IsNullOrWhiteSpace(r.Subject))return BadRequest(new{message="Subject is required."});var x=new TicketModel{Id=store.NextId(),TenantId=FrontendApi.Tenant(User),Subject=r.Subject,Description=r.Description,Status=r.Status??"New",Priority=r.Priority??"Medium",AccountId=r.AccountId,ContactId=r.ContactId,AssignedToUserId=r.AssignedToUserId,DueDate=r.DueDate,ResolvedAt=r.ResolvedAt,Category=r.Category,Notes=r.Notes};Enrich(x);store.Tickets.Add(x);return CreatedAtAction(nameof(Get),new{id=x.Id},x.Id);}}
+ [HttpPut("{id:int}")] public IActionResult Update(int id,Payload r){lock(store.SyncRoot){var x=store.Tickets.FirstOrDefault(x=>x.Id==id&&x.TenantId==FrontendApi.Tenant(User)&&!x.IsDeleted);if(x is null)return NotFound();x.Subject=r.Subject??x.Subject;x.Description=r.Description;x.Status=r.Status??x.Status;x.Priority=r.Priority??x.Priority;x.AccountId=r.AccountId;x.ContactId=r.ContactId;x.AssignedToUserId=r.AssignedToUserId;x.DueDate=r.DueDate;x.ResolvedAt=r.ResolvedAt;x.Category=r.Category;x.Notes=r.Notes;Enrich(x);return NoContent();}}
+ [HttpDelete("{id:int}")] public IActionResult Delete(int id){lock(store.SyncRoot){var x=store.Tickets.FirstOrDefault(x=>x.Id==id&&x.TenantId==FrontendApi.Tenant(User)&&!x.IsDeleted);if(x is null)return NotFound();x.IsDeleted=true;return NoContent();}}
+ private void Enrich(TicketModel x){x.AccountName=store.Accounts.FirstOrDefault(a=>a.Id==x.AccountId&&!a.IsDeleted)?.Name;}
+ public sealed record Payload(string? Subject,string? Description,string? Status,string? Priority,int? AccountId,int? ContactId,int? AssignedToUserId,DateTime? DueDate,DateTime? ResolvedAt,string? Category,string? Notes);
 }

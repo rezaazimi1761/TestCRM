@@ -1,9 +1,4 @@
-﻿using ModernCRM.SharedKernel.IntegrationEvents;
-
+using ModernCRM.SharedKernel.IntegrationEvents;
 namespace ModernCRM.Auth.Infrastructure.Messaging;
-
-public interface IUserIntegrationPublisher { Task PublishAsync(UserIntegrationEvent integrationEvent, CancellationToken ct); }
-public sealed class UserIntegrationPublisher : IUserIntegrationPublisher
-{
-    public Task PublishAsync(UserIntegrationEvent integrationEvent, CancellationToken ct) => Task.CompletedTask;
-}
+[Obsolete("User synchronization is initiated by CRM and consumed by ModernCRM.Auth.Api.")]
+public interface IUserIntegrationPublisher { Task PublishAsync(AuthUserSynced integrationEvent, CancellationToken ct); }

@@ -1,32 +1,29 @@
 using Microsoft.AspNetCore.Mvc;
-using ModernCRM.Crm.Application.Commands;
-using ModernCRM.Crm.Application.DTO;
-using ModernCRM.Crm.Application.Handlers;
-using ModernCRM.Crm.Application.Queries;
+using ModernCRM.Crm.Api.Frontend;
 
 namespace ModernCRM.Crm.Api.Controllers;
 
-[ApiController]
-[Route("api/accounts")]
-public sealed class AccountsController : ControllerBase
+[ApiController, Route("api/accounts")]
+public sealed class AccountsController(FrontendCrmStore store) : ControllerBase
 {
     [HttpGet]
-    public Task<IReadOnlyList<AccountDto>> GetAll([FromQuery] string tenantId, [FromQuery] string? search, [FromServices] GetAccountsHandler handler, CancellationToken ct)
-        => handler.Handle(new GetAccountsQuery(tenantId, search), ct);
-
+    public ActionResult<PagedResult<AccountModel>> GetAll(int page = 1, int pageSize = 20, string? sortBy = null, bool sortDesc = false, string? search = null)
+    {
+        lock (store.SyncRoot)
+        {
+            var tenant = FrontendApi.Tenant(User);
+            var query = store.Accounts.Where(x => x.TenantId == tenant && !x.IsDeleted);
+            if (!string.IsNullOrWhiteSpace(search)) query = query.Where(x => FrontendApi.Contains(x.Name, search) || FrontendApi.Contains(x.Industry, search));
+            return Ok(FrontendApi.Page(query, page, pageSize, sortBy, sortDesc));
+        }
+    }
     [HttpGet("{id:int}")]
-    public async Task<IActionResult> GetById(int id, [FromServices] GetAccountByIdHandler handler, CancellationToken ct)
-        => (await handler.Handle(new GetAccountByIdQuery(id), ct)) is { } item ? Ok(item) : NotFound();
-
+    public IActionResult Get(int id) { lock (store.SyncRoot) { var x = store.Accounts.FirstOrDefault(x => x.Id == id && x.TenantId == FrontendApi.Tenant(User) && !x.IsDeleted); return x is null ? NotFound() : Ok(x); } }
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] CreateAccountCommand command, [FromServices] CreateAccountHandler handler, CancellationToken ct)
-        => Created($"/api/accounts/{await handler.Handle(command, ct)}", null);
-
+    public IActionResult Create(Payload r) { lock (store.SyncRoot) { if (string.IsNullOrWhiteSpace(r.Name)) return BadRequest(new { message = "Account name is required." }); var x = new AccountModel { Id=store.NextId(), TenantId=FrontendApi.Tenant(User), Name=r.Name, Industry=r.Industry, Website=r.Website, Phone=r.Phone, Address=r.Address, Notes=r.Notes }; store.Accounts.Add(x); return CreatedAtAction(nameof(Get), new { id=x.Id }, x.Id); } }
     [HttpPut("{id:int}")]
-    public async Task<IActionResult> Update(int id, [FromBody] UpdateAccountCommand command, [FromServices] UpdateAccountHandler handler, CancellationToken ct)
-        => await handler.Handle(command with { Id = id }, ct) ? NoContent() : NotFound();
-
+    public IActionResult Update(int id, Payload r) { lock (store.SyncRoot) { var x=store.Accounts.FirstOrDefault(x=>x.Id==id&&x.TenantId==FrontendApi.Tenant(User)&&!x.IsDeleted); if(x is null)return NotFound(); if(string.IsNullOrWhiteSpace(r.Name))return BadRequest(new{message="Account name is required."}); x.Name=r.Name;x.Industry=r.Industry;x.Website=r.Website;x.Phone=r.Phone;x.Address=r.Address;x.Notes=r.Notes;return NoContent(); } }
     [HttpDelete("{id:int}")]
-    public async Task<IActionResult> Delete(int id, [FromServices] DeleteAccountHandler handler, CancellationToken ct)
-        => await handler.Handle(new DeleteAccountCommand(id), ct) ? NoContent() : NotFound();
+    public IActionResult Delete(int id) { lock(store.SyncRoot){var x=store.Accounts.FirstOrDefault(x=>x.Id==id&&x.TenantId==FrontendApi.Tenant(User)&&!x.IsDeleted);if(x is null)return NotFound();x.IsDeleted=true;return NoContent();} }
+    public sealed record Payload(string? Name, string? Industry, string? Website, string? Phone, string? Address, string? Notes);
 }

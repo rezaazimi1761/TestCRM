@@ -17,7 +17,7 @@ builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredServ
 builder.Services.AddAuthorizationCore();
 
 builder.Services.AddHttpClient<AuthApiClient>(c =>
-    c.BaseAddress = new Uri(builder.Configuration["AuthService:Url"] ?? "http://localhost:5273"));
+    c.BaseAddress = new Uri(builder.Configuration["AuthService:Url"] ?? "http://localhost:9041"));
 
 builder.Services.AddScoped<CrmApiClient>();
 builder.Services.AddScoped<AuthAdminClient>();
