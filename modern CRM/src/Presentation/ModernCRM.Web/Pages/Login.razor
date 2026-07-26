@@ -174,7 +174,7 @@
         try
         {
             var res = await AuthApi.LoginAsync(
-                new AuthApiClient.LoginRequest(_model.TenantId, _model.Username, _model.Password));
+                new LoginRequest(_model.TenantId, _model.Username, _model.Password));
 
             if (res is null)
             {

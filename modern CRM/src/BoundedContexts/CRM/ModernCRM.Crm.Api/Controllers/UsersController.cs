@@ -18,14 +18,14 @@ public sealed class UsersController(CrmIntegrationDbContext db, IPublishEndpoint
         if(!string.IsNullOrWhiteSpace(role))q=q.Where(x=>x.Role==role);
         q=sortBy switch{"username"=>sortDesc?q.OrderByDescending(x=>x.Username):q.OrderBy(x=>x.Username),"firstname"=>sortDesc?q.OrderByDescending(x=>x.FirstName):q.OrderBy(x=>x.FirstName),"lastname"=>sortDesc?q.OrderByDescending(x=>x.LastName):q.OrderBy(x=>x.LastName),"email"=>sortDesc?q.OrderByDescending(x=>x.Email):q.OrderBy(x=>x.Email),"role"=>sortDesc?q.OrderByDescending(x=>x.Role):q.OrderBy(x=>x.Role),_=>q.OrderByDescending(x=>x.Id)};
         var total=await q.CountAsync(ct);var users=await q.Skip((page-1)*pageSize).Take(pageSize).ToListAsync(ct);
-        return Ok(new PagedResult<UserView>(users.Select(ToView).ToList(),total,page,pageSize));
+        return Ok(new CrmUserPagedResult<CrmUserView>(users.Select(ToView).ToList(),total,page,pageSize));
     }
 
     [HttpGet("{id:int}")]
     public async Task<IActionResult> Get(int id,CancellationToken ct){var x=await db.Users.AsNoTracking().FirstOrDefaultAsync(x=>x.Id==id&&x.TenantId==Tenant()&&!x.IsDeleted,ct);return x is null?NotFound():Ok(ToView(x));}
 
     [HttpPost]
-    public async Task<IActionResult> Create(CreatePayload r,CancellationToken ct)
+    public async Task<IActionResult> Create(CreateCrmUserPayload r,CancellationToken ct)
     {
         if(string.IsNullOrWhiteSpace(r.Username)||string.IsNullOrWhiteSpace(r.Email)||string.IsNullOrWhiteSpace(r.FirstName)||string.IsNullOrWhiteSpace(r.LastName)||string.IsNullOrWhiteSpace(r.Password))return BadRequest(new{message="Username, email, name and password are required."});
         var tenant=Tenant();if(await db.Users.AnyAsync(x=>x.TenantId==tenant&&(x.Username==r.Username||x.Email==r.Email)&&!x.IsDeleted,ct))return Conflict(new{message="Username or email already exists in CRM."});
@@ -38,7 +38,7 @@ public sealed class UsersController(CrmIntegrationDbContext db, IPublishEndpoint
     }
 
     [HttpPut("{id:int}")]
-    public async Task<IActionResult> Update(int id,UpdatePayload r,CancellationToken ct)
+    public async Task<IActionResult> Update(int id,UpdateCrmUserPayload r,CancellationToken ct)
     {
         var user=await db.Users.FirstOrDefaultAsync(x=>x.Id==id&&x.TenantId==Tenant()&&!x.IsDeleted,ct);if(user is null)return NotFound();
         await using var tx=await db.Database.BeginTransactionAsync(ct);
@@ -57,9 +57,5 @@ public sealed class UsersController(CrmIntegrationDbContext db, IPublishEndpoint
     }
 
     private string Tenant()=>User.FindFirst("tenant_id")?.Value??"default";
-    private static UserView ToView(CrmUser x)=>new(x.Id,x.AuthUserId,x.TenantId,x.Username,x.FirstName,x.LastName,x.Email,x.Role,x.IsActive,x.IsDeleted,x.SyncStatus,x.SyncError,x.CreatedAt);
-    public sealed record CreatePayload(string? Username,string? Email,string? FirstName,string? LastName,string? Password,string? Role);
-    public sealed record UpdatePayload(string? Email,string? FirstName,string? LastName,string? Role,bool IsActive);
-    public sealed record UserView(int Id,int? AuthUserId,string TenantId,string Username,string FirstName,string LastName,string Email,string Role,bool IsActive,bool IsDeleted,string IntegrationStatus,string? IntegrationError,DateTime CreatedAt);
-    public sealed record PagedResult<T>(IReadOnlyList<T> Items,int TotalCount,int Page,int PageSize);
+    private static CrmUserView ToView(CrmUser x)=>new(x.Id,x.AuthUserId,x.TenantId,x.Username,x.FirstName,x.LastName,x.Email,x.Role,x.IsActive,x.IsDeleted,x.SyncStatus,x.SyncError,x.CreatedAt);
 }

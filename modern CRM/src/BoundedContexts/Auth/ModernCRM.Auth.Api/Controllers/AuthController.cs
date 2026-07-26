@@ -35,6 +35,4 @@ public sealed class AuthController(
         else if(!user.IsActive||!passwordHasher.Verify(request.Password,user.PasswordHash.Value))return Unauthorized(new{message="Invalid tenant, username, or password."});
         return Ok(new AuthResponse(tokens.GenerateAccessToken(user),tokens.GenerateRefreshToken(),DateTime.UtcNow.AddMinutes(configuration.GetValue("Jwt:AccessTokenMinutes",60)),user.Id,user.Username.Value,user.Role.ToString(),user.TenantId.Value,tenant.ServiceInstanceId,configuration["Seed:DefaultServiceInstanceUrl"]??"http://localhost:9040"));
     }
-    public sealed record LoginRequest(string TenantId,string Username,string Password);
-    public sealed record AuthResponse(string AccessToken,string RefreshToken,DateTime ExpiresAt,int UserId,string Username,string Role,string TenantId,Guid ServiceInstanceId,string ApiUrl);
 }

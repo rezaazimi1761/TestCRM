@@ -20,10 +20,9 @@ public sealed class AccountsController(FrontendCrmStore store) : ControllerBase
     [HttpGet("{id:int}")]
     public IActionResult Get(int id) { lock (store.SyncRoot) { var x = store.Accounts.FirstOrDefault(x => x.Id == id && x.TenantId == FrontendApi.Tenant(User) && !x.IsDeleted); return x is null ? NotFound() : Ok(x); } }
     [HttpPost]
-    public IActionResult Create(Payload r) { lock (store.SyncRoot) { if (string.IsNullOrWhiteSpace(r.Name)) return BadRequest(new { message = "Account name is required." }); var x = new AccountModel { Id=store.NextId(), TenantId=FrontendApi.Tenant(User), Name=r.Name, Industry=r.Industry, Website=r.Website, Phone=r.Phone, Address=r.Address, Notes=r.Notes }; store.Accounts.Add(x); return CreatedAtAction(nameof(Get), new { id=x.Id }, x.Id); } }
+    public IActionResult Create(AccountPayload r) { lock (store.SyncRoot) { if (string.IsNullOrWhiteSpace(r.Name)) return BadRequest(new { message = "Account name is required." }); var x = new AccountModel { Id=store.NextId(), TenantId=FrontendApi.Tenant(User), Name=r.Name, Industry=r.Industry, Website=r.Website, Phone=r.Phone, Address=r.Address, Notes=r.Notes }; store.Accounts.Add(x); return CreatedAtAction(nameof(Get), new { id=x.Id }, x.Id); } }
     [HttpPut("{id:int}")]
-    public IActionResult Update(int id, Payload r) { lock (store.SyncRoot) { var x=store.Accounts.FirstOrDefault(x=>x.Id==id&&x.TenantId==FrontendApi.Tenant(User)&&!x.IsDeleted); if(x is null)return NotFound(); if(string.IsNullOrWhiteSpace(r.Name))return BadRequest(new{message="Account name is required."}); x.Name=r.Name;x.Industry=r.Industry;x.Website=r.Website;x.Phone=r.Phone;x.Address=r.Address;x.Notes=r.Notes;return NoContent(); } }
+    public IActionResult Update(int id, AccountPayload r) { lock (store.SyncRoot) { var x=store.Accounts.FirstOrDefault(x=>x.Id==id&&x.TenantId==FrontendApi.Tenant(User)&&!x.IsDeleted); if(x is null)return NotFound(); if(string.IsNullOrWhiteSpace(r.Name))return BadRequest(new{message="Account name is required."}); x.Name=r.Name;x.Industry=r.Industry;x.Website=r.Website;x.Phone=r.Phone;x.Address=r.Address;x.Notes=r.Notes;return NoContent(); } }
     [HttpDelete("{id:int}")]
     public IActionResult Delete(int id) { lock(store.SyncRoot){var x=store.Accounts.FirstOrDefault(x=>x.Id==id&&x.TenantId==FrontendApi.Tenant(User)&&!x.IsDeleted);if(x is null)return NotFound();x.IsDeleted=true;return NoContent();} }
-    public sealed record Payload(string? Name, string? Industry, string? Website, string? Phone, string? Address, string? Notes);
 }

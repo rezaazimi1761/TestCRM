@@ -8,12 +8,6 @@ using ModernCRM.Auth.Domain.Users;
 
 namespace ModernCRM.Auth.Infrastructure.Identity;
 
-public interface IJwtTokenService
-{
-    string GenerateAccessToken(AuthUser user);
-    string GenerateRefreshToken();
-}
-
 public sealed class JwtTokenService(IConfiguration configuration) : IJwtTokenService
 {
     public string GenerateAccessToken(AuthUser user)

@@ -1,10 +1,7 @@
-﻿using ModernCRM.SharedKernel.BuildingBlocks;
+using ModernCRM.SharedKernel.BuildingBlocks;
 using ModernCRM.SharedKernel.ValueObjects;
 
 namespace ModernCRM.Crm.Domain.Tickets;
-
-public enum TicketStatus { New, Active, Closed, Removed }
-public enum TicketPriority { Low, Medium, High, Critical }
 
 public sealed class Ticket : AggregateRoot<int>
 {
