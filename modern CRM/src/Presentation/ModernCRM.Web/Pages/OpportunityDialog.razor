@@ -1,0 +1,82 @@
+@namespace ModernCRM.Web.Pages
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="_form" @bind-IsValid="_isValid">
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_model.Title" Label="Title"
+                                  Variant="Variant.Outlined" Required="true" />
+                </MudItem>
+                <MudItem xs="6">
+                    <MudNumericField T="decimal" @bind-Value="_model.Value" Label="Value"
+                                     Variant="Variant.Outlined" Format="F2" />
+                </MudItem>
+                <MudItem xs="6">
+                    <MudSelect T="string" @bind-Value="_model.Stage" Label="Stage"
+                               Variant="Variant.Outlined">
+                        <MudSelectItem Value="@("Prospecting")">Prospecting</MudSelectItem>
+                        <MudSelectItem Value="@("Qualification")">Qualification</MudSelectItem>
+                        <MudSelectItem Value="@("Proposal")">Proposal</MudSelectItem>
+                        <MudSelectItem Value="@("Negotiation")">Negotiation</MudSelectItem>
+                        <MudSelectItem Value="@("ClosedWon")">Closed Won</MudSelectItem>
+                        <MudSelectItem Value="@("ClosedLost")">Closed Lost</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12">
+                    <MudDatePicker @bind-Date="_model.ExpectedCloseDate" Label="Expected Close Date"
+                                   Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_model.Notes" Label="Notes"
+                                  Variant="Variant.Outlined" Lines="2" />
+                </MudItem>
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled"
+                   Disabled="!_isValid" OnClick="Submit">@_submitLabel</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private MudDialogInstance Dialog { get; set; } = default!;
+    [Parameter] public Model? Existing { get; set; }
+
+    private MudForm? _form;
+    private bool _isValid;
+    private Model _model = new();
+    private string _submitLabel = "Create";
+
+    public class Model
+    {
+        public int       Id                { get; set; }
+        public string    Title             { get; set; } = "";
+        public decimal   Value             { get; set; }
+        public string    Stage             { get; set; } = "Prospecting";
+        public DateTime? ExpectedCloseDate { get; set; }
+        public string?   Notes            { get; set; }
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (Existing is not null)
+        {
+            _model = new Model
+            {
+                Id                = Existing.Id,
+                Title             = Existing.Title,
+                Value             = Existing.Value,
+                Stage             = Existing.Stage ?? "Prospecting",
+                ExpectedCloseDate = Existing.ExpectedCloseDate,
+                Notes             = Existing.Notes
+            };
+            _submitLabel = "Save";
+        }
+    }
+
+    private void Submit() => Dialog.Close(DialogResult.Ok(_model));
+    private void Cancel() => Dialog.Cancel();
+}

@@ -1,0 +1,118 @@
+@page "/accounts"
+@attribute [Authorize]
+@inject CrmApiClient Crm
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>Accounts</PageTitle>
+
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-3">
+    <MudIcon Icon="@Icons.Material.Filled.Business" Size="Size.Large" Color="Color.Primary" />
+    <MudText Typo="Typo.h4">Accounts</MudText>
+    <MudSpacer />
+    <MudTextField @bind-Value="_search" Placeholder="Search name, industry…"
+                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                  Immediate="true" DebounceInterval="350"
+                  OnDebounceIntervalElapsed="OnSearchChanged"
+                  Variant="Variant.Outlined" Margin="Margin.Dense"
+                  Style="min-width:260px" />
+    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+               StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => OpenDialogAsync(null))" Class="ml-2">
+        New Account
+    </MudButton>
+</MudStack>
+
+<MudDataGrid T="Account" @ref="_grid" ServerData="LoadServerData"
+             Hover="true" Dense="true" Striped="true" SortMode="SortMode.Single" Filterable="false">
+    <Columns>
+        <PropertyColumn Property="x => x.Name"     Title="Name" />
+        <PropertyColumn Property="x => x.Industry" Title="Industry" />
+        <PropertyColumn Property="x => x.Website"  Title="Website" />
+        <PropertyColumn Property="x => x.Phone"    Title="Phone"   Sortable="false" />
+        <TemplateColumn Title="Actions" Sortable="false">
+            <CellTemplate>
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small"
+                               OnClick="@(() => OpenDialogAsync(context.Item))" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
+                               OnClick="@(() => DeleteAsync(context.Item.Id))" />
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+    <PagerContent>
+        <MudDataGridPager T="Account" PageSizeOptions="new[]{10,20,50,100}" />
+    </PagerContent>
+</MudDataGrid>
+
+@code {
+    private MudDataGrid<Account>? _grid;
+    private string? _search;
+
+    public class Account
+    {
+        public int     Id       { get; set; }
+        public string? Name     { get; set; }
+        public string? Industry { get; set; }
+        public string? Website  { get; set; }
+        public string? Phone    { get; set; }
+        public string? Address  { get; set; }
+        public string? Notes    { get; set; }
+    }
+
+    private async Task<GridData<Account>> LoadServerData(GridState<Account> state)
+    {
+        var sort = state.SortDefinitions.FirstOrDefault();
+        try
+        {
+            var result = await Crm.GetPagedAsync<Account>(
+                "/api/accounts", state.Page + 1, state.PageSize,
+                sort?.SortBy?.ToLowerInvariant(), sort?.Descending ?? false, _search);
+            return new GridData<Account> { Items = result?.Items ?? new(), TotalItems = result?.TotalCount ?? 0 };
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Load failed: {ex.Message}", Severity.Error);
+
+
+
+            return new GridData<Account> { Items = new List<Account>(), TotalItems = 0 };
+
+
+
+        }
+    }
+
+    private Task OnSearchChanged() => _grid?.ReloadServerData() ?? Task.CompletedTask;
+
+    private async Task OpenDialogAsync(Account? existing)
+    {
+        var model = existing is null ? null : new AccountDialog.Model
+        {
+            Id = existing.Id, Name = existing.Name ?? "", Industry = existing.Industry,
+            Website = existing.Website, Phone = existing.Phone, Address = existing.Address, Notes = existing.Notes
+        };
+        var parameters = new DialogParameters { ["Existing"] = model };
+        var dlg = await DialogService.ShowAsync<AccountDialog>(existing is null ? "New Account" : "Edit Account", parameters);
+        var res = await dlg.Result;
+        if (res is null || res.Canceled) return;
+
+        var req = (AccountDialog.Model)res.Data!;
+        HttpResponseMessage r;
+        if (req.Id == 0)
+            r = await Crm.PostAsync("/api/accounts", new { name = req.Name, industry = req.Industry, website = req.Website, phone = req.Phone, address = req.Address, notes = req.Notes });
+        else
+            r = await Crm.PutAsync($"/api/accounts/{req.Id}", new { id = req.Id, name = req.Name, industry = req.Industry, website = req.Website, phone = req.Phone, address = req.Address, notes = req.Notes });
+
+        Snackbar.Add(r.IsSuccessStatusCode ? (req.Id == 0 ? "Account created" : "Account updated") : $"Failed: {await ApiErrorReader.ReadAsync(r)}",
+            r.IsSuccessStatusCode ? Severity.Success : Severity.Error);
+        if (r.IsSuccessStatusCode) await (_grid?.ReloadServerData() ?? Task.CompletedTask);
+    }
+
+    private async Task DeleteAsync(int id)
+    {
+        var ok = await DialogService.ShowMessageBox("Delete account?", "This action cannot be undone.", yesText: "Delete", cancelText: "Cancel");
+        if (ok != true) return;
+        var r = await Crm.DeleteAsync($"/api/accounts/{id}");
+        Snackbar.Add(r.IsSuccessStatusCode ? "Deleted" : "Failed", r.IsSuccessStatusCode ? Severity.Success : Severity.Error);
+        if (r.IsSuccessStatusCode) await (_grid?.ReloadServerData() ?? Task.CompletedTask);
+    }
+}

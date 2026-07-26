@@ -1,0 +1,182 @@
+@namespace ModernCRM.Web.Pages
+
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudIcon Icon="@Icons.Material.Rounded.ConfirmationNumber" Color="Color.Primary" />
+            <MudText Typo="Typo.h6">@(_isEdit ? "Edit Ticket" : "New Ticket")</MudText>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" @bind-IsValid="_isValid">
+            <MudGrid Spacing="2">
+
+                @* Subject *@
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_model.Subject" Label="Subject"
+                                  Variant="Variant.Outlined" Required="true"
+                                  RequiredError="Subject is required"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Rounded.Title" />
+                </MudItem>
+
+                @* Status + Priority *@
+                <MudItem xs="6">
+                    <MudSelect T="string" @bind-Value="_model.Status" Label="Status"
+                               Variant="Variant.Outlined"
+                               Adornment="Adornment.Start"
+                               AdornmentIcon="@Icons.Material.Rounded.Flag">
+                        <MudSelectItem Value="@("New")">New</MudSelectItem>
+                        <MudSelectItem Value="@("Active")">Active</MudSelectItem>
+                        <MudSelectItem Value="@("Closed")">Closed</MudSelectItem>
+                        <MudSelectItem Value="@("Removed")">Removed</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="6">
+                    <MudSelect T="string" @bind-Value="_model.Priority" Label="Priority"
+                               Variant="Variant.Outlined"
+                               Adornment="Adornment.Start"
+                               AdornmentIcon="@Icons.Material.Rounded.PriorityHigh">
+                        <MudSelectItem Value="@("Low")">Low</MudSelectItem>
+                        <MudSelectItem Value="@("Medium")">Medium</MudSelectItem>
+                        <MudSelectItem Value="@("High")">High</MudSelectItem>
+                        <MudSelectItem Value="@("Critical")">Critical</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+
+                @* Account (Requested From) *@
+                <MudItem xs="6">
+                    <MudSelect T="int?" @bind-Value="_model.AccountId" Label="Requested From (Account)"
+                               Variant="Variant.Outlined" Clearable="true"
+                               Adornment="Adornment.Start"
+                               AdornmentIcon="@Icons.Material.Rounded.Business">
+                        @foreach (var acc in Accounts)
+                        {
+                            <MudSelectItem T="int?" Value="@acc.Id">@acc.Name</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+
+                @* Contact *@
+                <MudItem xs="6">
+                    <MudSelect T="int?" @bind-Value="_model.ContactId" Label="Contact"
+                               Variant="Variant.Outlined" Clearable="true"
+                               Adornment="Adornment.Start"
+                               AdornmentIcon="@Icons.Material.Rounded.Person">
+                        @foreach (var c in Contacts)
+                        {
+                            <MudSelectItem T="int?" Value="@c.Id">@c.FirstName @c.LastName</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+
+                @* Category *@
+                <MudItem xs="6">
+                    <MudTextField @bind-Value="_model.Category" Label="Category"
+                                  Variant="Variant.Outlined"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Rounded.Label" />
+                </MudItem>
+
+                @* Due Date *@
+                <MudItem xs="6">
+                    <MudDatePicker @bind-Date="_model.DueDate" Label="Due Date"
+                                   Variant="Variant.Outlined" Editable="true"
+                                   DateFormat="yyyy-MM-dd" />
+                </MudItem>
+
+                @* Description *@
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_model.Description" Label="Description"
+                                  Variant="Variant.Outlined" Lines="3"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Rounded.Description" />
+                </MudItem>
+
+                @* Notes *@
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_model.Notes" Label="Notes"
+                                  Variant="Variant.Outlined" Lines="2"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Rounded.StickyNote2" />
+                </MudItem>
+
+                @* ResolvedAt — edit only *@
+                @if (_isEdit)
+                {
+                    <MudItem xs="6">
+                        <MudDatePicker @bind-Date="_model.ResolvedAt" Label="Resolved At"
+                                       Variant="Variant.Outlined" Editable="true"
+                                       DateFormat="yyyy-MM-dd" />
+                    </MudItem>
+                }
+
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled"
+                   Disabled="!_isValid" OnClick="Submit"
+                   StartIcon="@(_isEdit ? Icons.Material.Rounded.Save : Icons.Material.Rounded.Add)">
+            @(_isEdit ? "Save Changes" : "Create Ticket")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private MudDialogInstance Dialog { get; set; } = default!;
+    [Parameter] public Model? Existing { get; set; }
+    [Parameter] public List<AccountItem> Accounts { get; set; } = new();
+    [Parameter] public List<ContactItem> Contacts { get; set; } = new();
+
+    private MudForm? _form;
+    private bool _isValid;
+    private bool _isEdit;
+    private Model _model = new();
+
+    public class Model
+    {
+        public int      Id               { get; set; }
+        public string   Subject          { get; set; } = "";
+        public string?  Description      { get; set; }
+        public string   Status           { get; set; } = "New";
+        public string   Priority         { get; set; } = "Medium";
+        public int?     AccountId        { get; set; }
+        public int?     ContactId        { get; set; }
+        public int?     AssignedToUserId { get; set; }
+        public DateTime? DueDate         { get; set; }
+        public DateTime? ResolvedAt      { get; set; }
+        public string?  Category         { get; set; }
+        public string?  Notes            { get; set; }
+    }
+
+    public class AccountItem { public int Id { get; set; } public string? Name { get; set; } }
+    public class ContactItem { public int Id { get; set; } public string? FirstName { get; set; } public string? LastName { get; set; } }
+
+    protected override void OnParametersSet()
+    {
+        if (Existing is not null)
+        {
+            _isEdit = true;
+            _model = new Model
+            {
+                Id               = Existing.Id,
+                Subject          = Existing.Subject,
+                Description      = Existing.Description,
+                Status           = Existing.Status,
+                Priority         = Existing.Priority,
+                AccountId        = Existing.AccountId,
+                ContactId        = Existing.ContactId,
+                AssignedToUserId = Existing.AssignedToUserId,
+                DueDate          = Existing.DueDate,
+                ResolvedAt       = Existing.ResolvedAt,
+                Category         = Existing.Category,
+                Notes            = Existing.Notes
+            };
+        }
+    }
+
+    private void Submit() => Dialog.Close(DialogResult.Ok(_model));
+    private void Cancel() => Dialog.Cancel();
+}

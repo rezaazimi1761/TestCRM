@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\ModernCRM.Crm.Application\ModernCRM.Crm.Application.csproj" />
+    <ProjectReference Include="..\ModernCRM.Crm.Domain\ModernCRM.Crm.Domain.csproj" />
+    <ProjectReference Include="..\..\..\SharedKernel\ModernCRM.SharedKernel\ModernCRM.SharedKernel.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

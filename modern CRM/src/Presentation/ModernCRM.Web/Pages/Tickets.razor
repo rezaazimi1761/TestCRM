@@ -1,0 +1,206 @@
+@page "/tickets"
+@attribute [Authorize]
+@inject CrmApiClient Crm
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>Tickets</PageTitle>
+
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-3">
+    <MudIcon Icon="@Icons.Material.Rounded.ConfirmationNumber" Size="Size.Large" Color="Color.Primary" />
+    <MudText Typo="Typo.h4">Tickets</MudText>
+    <MudSpacer />
+    <MudTextField @bind-Value="_search" Placeholder="Search subject, category…"
+                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                  Immediate="true" DebounceInterval="350"
+                  OnDebounceIntervalElapsed="OnSearchChanged"
+                  Variant="Variant.Outlined" Margin="Margin.Dense"
+                  Style="min-width:220px" />
+    <MudSelect T="string" Value="_statusFilter" Placeholder="All Statuses"
+               Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true"
+               Style="min-width:140px" Class="ml-2"
+               ValueChanged="@((string? v) => { _statusFilter = v; _ = OnSearchChanged(); })">
+        @foreach (var s in new[]{"New","Active","Closed","Removed"})
+        { <MudSelectItem Value="@s">@s</MudSelectItem> }
+    </MudSelect>
+    <MudSelect T="string" Value="_priorityFilter" Placeholder="All Priorities"
+               Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true"
+               Style="min-width:150px" Class="ml-2"
+               ValueChanged="@((string? v) => { _priorityFilter = v; _ = OnSearchChanged(); })">
+        @foreach (var p in new[]{"Low","Medium","High","Critical"})
+        { <MudSelectItem Value="@p">@p</MudSelectItem> }
+    </MudSelect>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+               StartIcon="@Icons.Material.Rounded.Add"
+               OnClick="@(() => OpenDialogAsync(null))" Class="ml-2">
+        New Ticket
+    </MudButton>
+</MudStack>
+
+<MudDataGrid T="TicketDto" @ref="_grid" ServerData="LoadServerData"
+             Hover="true" Dense="true" Striped="true" SortMode="SortMode.Single" Filterable="false">
+    <Columns>
+        <PropertyColumn Property="x => x.Subject"     Title="Subject" />
+        <TemplateColumn Title="Status" SortBy="@(new Func<TicketDto,object?>(x => x.Status))">
+            <CellTemplate>
+                <MudChip Size="Size.Small" Color="@StatusColor(context.Item.Status)">@context.Item.Status</MudChip>
+            </CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="Priority" SortBy="@(new Func<TicketDto,object?>(x => x.Priority))">
+            <CellTemplate>
+                <MudChip Size="Size.Small" Color="@PriorityColor(context.Item.Priority)">@context.Item.Priority</MudChip>
+            </CellTemplate>
+        </TemplateColumn>
+        <PropertyColumn Property="x => x.AccountName" Title="Account"  Sortable="false" />
+        <PropertyColumn Property="x => x.Category"    Title="Category" />
+        <PropertyColumn Property="x => x.DueDate"     Title="Due Date" Format="yyyy-MM-dd" />
+        <TemplateColumn Title="Actions" Sortable="false">
+            <CellTemplate>
+                <MudIconButton Icon="@Icons.Material.Rounded.Edit" Color="Color.Primary" Size="Size.Small"
+                               OnClick="@(() => OpenDialogAsync(context.Item))" />
+                <MudIconButton Icon="@Icons.Material.Rounded.Delete" Color="Color.Error" Size="Size.Small"
+                               OnClick="@(() => DeleteAsync(context.Item.Id))" />
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+    <PagerContent>
+        <MudDataGridPager T="TicketDto" PageSizeOptions="new[]{10,20,50,100}" />
+    </PagerContent>
+</MudDataGrid>
+
+@code {
+    private MudDataGrid<TicketDto>? _grid;
+    private List<TicketDialog.AccountItem> _accounts = new();
+    private List<TicketDialog.ContactItem> _contacts = new();
+    private string? _search;
+    private string? _statusFilter;
+    private string? _priorityFilter;
+
+    public class TicketDto
+    {
+        public int       Id               { get; set; }
+        public string    Subject          { get; set; } = "";
+        public string?   Description      { get; set; }
+        public string    Status           { get; set; } = "New";
+        public string    Priority         { get; set; } = "Medium";
+        public int?      AccountId        { get; set; }
+        public string?   AccountName      { get; set; }
+        public int?      ContactId        { get; set; }
+        public int?      AssignedToUserId { get; set; }
+        public DateTime? DueDate          { get; set; }
+        public DateTime? ResolvedAt       { get; set; }
+        public string?   Category         { get; set; }
+        public string?   Notes            { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var at = Crm.GetPagedAsync<TicketDialog.AccountItem>("/api/accounts", 1, 500);
+            var ct = Crm.GetPagedAsync<TicketDialog.ContactItem>("/api/contacts", 1, 500);
+            await Task.WhenAll(at, ct);
+            _accounts = at.Result?.Items ?? new();
+            _contacts = ct.Result?.Items ?? new();
+        }
+        catch (Exception ex) { Snackbar.Add($"Load failed: {ex.Message}", Severity.Error); }
+    }
+
+    private async Task<GridData<TicketDto>> LoadServerData(GridState<TicketDto> state)
+    {
+        var sort = state.SortDefinitions.FirstOrDefault();
+        try
+        {
+            var result = await Crm.GetPagedAsync<TicketDto>(
+                "/api/tickets", state.Page + 1, state.PageSize,
+                sort?.SortBy?.ToLowerInvariant(), sort?.Descending ?? false, _search,
+                new Dictionary<string, string?> { ["status"] = _statusFilter, ["priority"] = _priorityFilter });
+            return new GridData<TicketDto> { Items = result?.Items ?? new(), TotalItems = result?.TotalCount ?? 0 };
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Load failed: {ex.Message}", Severity.Error);
+
+            return new GridData<TicketDto> { Items = new List<TicketDto>(), TotalItems = 0 };
+
+        }
+    }
+
+    private Task OnSearchChanged() => _grid?.ReloadServerData() ?? Task.CompletedTask;
+
+    private async Task OpenDialogAsync(TicketDto? existing)
+    {
+        var model = existing is null ? null : new TicketDialog.Model
+        {
+            Id = existing.Id, Subject = existing.Subject, Description = existing.Description,
+            Status = existing.Status, Priority = existing.Priority,
+            AccountId = existing.AccountId, ContactId = existing.ContactId,
+            AssignedToUserId = existing.AssignedToUserId,
+            DueDate = existing.DueDate, ResolvedAt = existing.ResolvedAt,
+            Category = existing.Category, Notes = existing.Notes
+        };
+        var parameters = new DialogParameters { ["Existing"] = model, ["Accounts"] = _accounts, ["Contacts"] = _contacts };
+        var dlg = await DialogService.ShowAsync<TicketDialog>(existing is null ? "New Ticket" : "Edit Ticket", parameters);
+        var res = await dlg.Result;
+        if (res is null || res.Canceled) return;
+
+        var req = (TicketDialog.Model)res.Data!;
+        if (req.Id == 0) await CreateAsync(req);
+        else             await UpdateAsync(req);
+    }
+
+    private async Task CreateAsync(TicketDialog.Model req)
+    {
+        var r = await Crm.PostAsync("/api/tickets", new
+        {
+            subject = req.Subject, description = req.Description, status = req.Status,
+            priority = req.Priority, accountId = req.AccountId, contactId = req.ContactId,
+            assignedToUserId = req.AssignedToUserId, dueDate = req.DueDate,
+            category = req.Category, notes = req.Notes
+        });
+        Snackbar.Add(r.IsSuccessStatusCode ? "Ticket created ✓" : $"Failed: {await ApiErrorReader.ReadAsync(r)}",
+                     r.IsSuccessStatusCode ? Severity.Success : Severity.Error);
+        if (r.IsSuccessStatusCode) await (_grid?.ReloadServerData() ?? Task.CompletedTask);
+    }
+
+    private async Task UpdateAsync(TicketDialog.Model req)
+    {
+        var r = await Crm.PutAsync($"/api/tickets/{req.Id}", new
+        {
+            id = req.Id, subject = req.Subject, description = req.Description,
+            status = req.Status, priority = req.Priority,
+            accountId = req.AccountId, contactId = req.ContactId,
+            assignedToUserId = req.AssignedToUserId, dueDate = req.DueDate,
+            resolvedAt = req.ResolvedAt, category = req.Category, notes = req.Notes
+        });
+        Snackbar.Add(r.IsSuccessStatusCode ? "Ticket updated ✓" : $"Failed: {await ApiErrorReader.ReadAsync(r)}",
+                     r.IsSuccessStatusCode ? Severity.Success : Severity.Error);
+        if (r.IsSuccessStatusCode) await (_grid?.ReloadServerData() ?? Task.CompletedTask);
+    }
+
+    private async Task DeleteAsync(int id)
+    {
+        var ok = await DialogService.ShowMessageBox("Delete ticket?", "This action cannot be undone.", yesText: "Delete", cancelText: "Cancel");
+        if (ok != true) return;
+        var r = await Crm.DeleteAsync($"/api/tickets/{id}");
+        Snackbar.Add(r.IsSuccessStatusCode ? "Deleted ✓" : "Delete failed",
+                     r.IsSuccessStatusCode ? Severity.Success : Severity.Error);
+        if (r.IsSuccessStatusCode) await (_grid?.ReloadServerData() ?? Task.CompletedTask);
+    }
+
+    private static Color StatusColor(string? s) => s switch
+    {
+        "Active"  => Color.Success,
+        "Closed"  => Color.Default,
+        "Removed" => Color.Error,
+        _         => Color.Info
+    };
+
+    private static Color PriorityColor(string? p) => p switch
+    {
+        "Critical" => Color.Error,
+        "High"     => Color.Warning,
+        "Low"      => Color.Default,
+        _          => Color.Primary
+    };
+}

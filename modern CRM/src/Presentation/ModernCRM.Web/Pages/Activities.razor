@@ -1,0 +1,155 @@
+@page "/activities"
+@attribute [Authorize]
+@inject CrmApiClient Crm
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>Activities</PageTitle>
+
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-3">
+    <MudIcon Icon="@Icons.Material.Filled.Event" Size="Size.Large" Color="Color.Primary" />
+    <MudText Typo="Typo.h4">Activities</MudText>
+    <MudSpacer />
+    <MudTextField @bind-Value="_search" Placeholder="Search subject…"
+                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                  Immediate="true" DebounceInterval="350"
+                  OnDebounceIntervalElapsed="OnSearchChanged"
+                  Variant="Variant.Outlined" Margin="Margin.Dense"
+                  Style="min-width:220px" />
+    <MudSelect T="string" Value="_typeFilter" Placeholder="All Types"
+               Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true"
+               Style="min-width:140px" Class="ml-2"
+               ValueChanged="@((string? v) => { _typeFilter = v; _ = OnSearchChanged(); })">
+        @foreach (var t in new[]{"Call","Email","Meeting","Task","Note"})
+        { <MudSelectItem Value="@t">@t</MudSelectItem> }
+    </MudSelect>
+    <MudSelect T="string" Value="_completedFilter" Placeholder="Any Status"
+               Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true"
+               Style="min-width:140px" Class="ml-2"
+               ValueChanged="@((string? v) => { _completedFilter = v; _ = OnSearchChanged(); })">
+        <MudSelectItem Value="@("false")">Pending</MudSelectItem>
+        <MudSelectItem Value="@("true")">Completed</MudSelectItem>
+    </MudSelect>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+               StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => OpenDialogAsync(null))" Class="ml-2">
+        New Activity
+    </MudButton>
+</MudStack>
+
+<MudDataGrid T="Activity" @ref="_grid" ServerData="LoadServerData"
+             Hover="true" Dense="true" Striped="true" SortMode="SortMode.Single" Filterable="false">
+    <Columns>
+        <PropertyColumn Property="x => x.Subject"     Title="Subject" />
+        <TemplateColumn Title="Type" SortBy="@(new Func<Activity,object?>(x => x.Type))">
+            <CellTemplate>
+                <MudChip Size="Size.Small" Color="@TypeColor(context.Item.Type)">@context.Item.Type</MudChip>
+            </CellTemplate>
+        </TemplateColumn>
+        <PropertyColumn Property="x => x.ContactName" Title="Contact"  Sortable="false" />
+        <PropertyColumn Property="x => x.DueDate"     Title="Due Date" Format="yyyy-MM-dd" />
+        <TemplateColumn Title="Done" SortBy="@(new Func<Activity,object?>(x => x.IsCompleted))">
+            <CellTemplate>
+                <MudIcon Icon="@(context.Item.IsCompleted ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.RadioButtonUnchecked)"
+                         Color="@(context.Item.IsCompleted ? Color.Success : Color.Default)" />
+            </CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="Actions" Sortable="false">
+            <CellTemplate>
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small"
+                               OnClick="@(() => OpenDialogAsync(context.Item))" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
+                               OnClick="@(() => DeleteAsync(context.Item.Id))" />
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+    <PagerContent>
+        <MudDataGridPager T="Activity" PageSizeOptions="new[]{10,20,50,100}" />
+    </PagerContent>
+</MudDataGrid>
+
+@code {
+    private MudDataGrid<Activity>? _grid;
+    private string? _search;
+    private string? _typeFilter;
+    private string? _completedFilter;
+
+    public class Activity
+    {
+        public int       Id          { get; set; }
+        public string?   Subject     { get; set; }
+        public string?   Type        { get; set; }
+        public string?   Description { get; set; }
+        public int?      ContactId   { get; set; }
+        public string?   ContactName { get; set; }
+        public DateTime? DueDate     { get; set; }
+        public bool      IsCompleted { get; set; }
+    }
+
+    private async Task<GridData<Activity>> LoadServerData(GridState<Activity> state)
+    {
+        var sort = state.SortDefinitions.FirstOrDefault();
+        try
+        {
+            var result = await Crm.GetPagedAsync<Activity>(
+                "/api/activities", state.Page + 1, state.PageSize,
+                sort?.SortBy?.ToLowerInvariant(), sort?.Descending ?? false, _search,
+                new Dictionary<string, string?> { ["type"] = _typeFilter, ["isCompleted"] = _completedFilter });
+            return new GridData<Activity> { Items = result?.Items ?? new(), TotalItems = result?.TotalCount ?? 0 };
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Load failed: {ex.Message}", Severity.Error);
+
+
+
+            return new GridData<Activity> { Items = new List<Activity>(), TotalItems = 0 };
+
+
+
+        }
+    }
+
+    private Task OnSearchChanged() => _grid?.ReloadServerData() ?? Task.CompletedTask;
+
+    private static Color TypeColor(string? t) => t switch
+    {
+        "Call"    => Color.Info,
+        "Email"   => Color.Primary,
+        "Meeting" => Color.Success,
+        "Note"    => Color.Default,
+        _         => Color.Warning
+    };
+
+    private async Task OpenDialogAsync(Activity? existing)
+    {
+        var model = existing is null ? null : new ActivityDialog.Model
+        {
+            Id = existing.Id, Subject = existing.Subject ?? "", Type = existing.Type ?? "Task",
+            Description = existing.Description, DueDate = existing.DueDate, IsCompleted = existing.IsCompleted
+        };
+        var parameters = new DialogParameters { ["Existing"] = model };
+        var dlg = await DialogService.ShowAsync<ActivityDialog>(existing is null ? "New Activity" : "Edit Activity", parameters);
+        var res = await dlg.Result;
+        if (res is null || res.Canceled) return;
+
+        var req = (ActivityDialog.Model)res.Data!;
+        HttpResponseMessage r;
+        if (req.Id == 0)
+            r = await Crm.PostAsync("/api/activities", new { subject = req.Subject, type = req.Type, description = req.Description, dueDate = req.DueDate });
+        else
+            r = await Crm.PutAsync($"/api/activities/{req.Id}", new { id = req.Id, subject = req.Subject, type = req.Type, description = req.Description, dueDate = req.DueDate, isCompleted = req.IsCompleted });
+
+        Snackbar.Add(r.IsSuccessStatusCode ? (req.Id == 0 ? "Activity created" : "Activity updated") : $"Failed: {await ApiErrorReader.ReadAsync(r)}",
+            r.IsSuccessStatusCode ? Severity.Success : Severity.Error);
+        if (r.IsSuccessStatusCode) await (_grid?.ReloadServerData() ?? Task.CompletedTask);
+    }
+
+    private async Task DeleteAsync(int id)
+    {
+        var ok = await DialogService.ShowMessageBox("Delete activity?", "This action cannot be undone.", yesText: "Delete", cancelText: "Cancel");
+        if (ok != true) return;
+        var r = await Crm.DeleteAsync($"/api/activities/{id}");
+        Snackbar.Add(r.IsSuccessStatusCode ? "Deleted" : "Failed", r.IsSuccessStatusCode ? Severity.Success : Severity.Error);
+        if (r.IsSuccessStatusCode) await (_grid?.ReloadServerData() ?? Task.CompletedTask);
+    }
+}

@@ -1,0 +1,12 @@
+@page "/"
+@inject NavigationManager Nav
+@inject AuthStateProvider AuthState
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        var token = await AuthState.GetTokenAsync();
+        Nav.NavigateTo(string.IsNullOrEmpty(token) ? "/login" : "/dashboard", true);
+    }
+}

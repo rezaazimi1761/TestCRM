@@ -1,0 +1,80 @@
+@namespace ModernCRM.Web.Pages
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="_form" @bind-IsValid="_isValid">
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_model.Subject" Label="Subject"
+                                  Variant="Variant.Outlined" Required="true" />
+                </MudItem>
+                <MudItem xs="6">
+                    <MudSelect T="string" @bind-Value="_model.Type" Label="Type"
+                               Variant="Variant.Outlined">
+                        <MudSelectItem Value="@("Call")">Call</MudSelectItem>
+                        <MudSelectItem Value="@("Email")">Email</MudSelectItem>
+                        <MudSelectItem Value="@("Meeting")">Meeting</MudSelectItem>
+                        <MudSelectItem Value="@("Task")">Task</MudSelectItem>
+                        <MudSelectItem Value="@("Note")">Note</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="6">
+                    <MudDatePicker @bind-Date="_model.DueDate" Label="Due Date"
+                                   Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_model.Description" Label="Description"
+                                  Variant="Variant.Outlined" Lines="2" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudCheckBox @bind-Value="_model.IsCompleted" Label="Completed" Color="Color.Primary" />
+                </MudItem>
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled"
+                   Disabled="!_isValid" OnClick="Submit">@_submitLabel</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private MudDialogInstance Dialog { get; set; } = default!;
+    [Parameter] public Model? Existing { get; set; }
+
+    private MudForm? _form;
+    private bool _isValid;
+    private Model _model = new();
+    private string _submitLabel = "Create";
+
+    public class Model
+    {
+        public int       Id          { get; set; }
+        public string    Subject     { get; set; } = "";
+        public string    Type        { get; set; } = "Task";
+        public string?   Description { get; set; }
+        public DateTime? DueDate     { get; set; }
+        public bool      IsCompleted { get; set; }
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (Existing is not null)
+        {
+            _model = new Model
+            {
+                Id          = Existing.Id,
+                Subject     = Existing.Subject,
+                Type        = Existing.Type ?? "Task",
+                Description = Existing.Description,
+                DueDate     = Existing.DueDate,
+                IsCompleted = Existing.IsCompleted
+            };
+            _submitLabel = "Save";
+        }
+    }
+
+    private void Submit() => Dialog.Close(DialogResult.Ok(_model));
+    private void Cancel() => Dialog.Cancel();
+}
