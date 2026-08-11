@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using ModernCRM.Auth.Api.UserSync;
 
@@ -11,9 +12,11 @@ using ModernCRM.Auth.Api.UserSync;
 namespace ModernCRM.Auth.Api.Migrations.UserSync
 {
     [DbContext(typeof(AuthIntegrationDbContext))]
-    partial class AuthIntegrationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260810113736_PersistServiceInstances")]
+    partial class PersistServiceInstances
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

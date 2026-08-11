@@ -1,9 +1,8 @@
 using ModernCRM.Crm.Domain.Accounts;
 using ModernCRM.Crm.Domain.Repositories;
 using ModernCRM.Crm.Infrastructure.Persistence;
-using ModernCRM.SharedKernel.BuildingBlocks;
 using ModernCRM.SharedKernel.ValueObjects;
-using System.Reflection;
+using Microsoft.EntityFrameworkCore;
 
 namespace ModernCRM.Crm.Infrastructure.Repositories;
 
@@ -12,32 +11,21 @@ public sealed class AccountRepository : IAccountRepository
     private readonly CrmDbContext _db;
     public AccountRepository(CrmDbContext db) => _db = db;
 
-    public Task AddAsync(Account account, CancellationToken ct)
-    {
-        if (account.Id == 0) SetId(account, _db.NextAccountId());
-        _db.Accounts.Add(account);
-        return Task.CompletedTask;
-    }
+    public async Task AddAsync(Account account, CancellationToken ct) => await _db.Accounts.AddAsync(account, ct);
 
-    public Task<Account?> GetAsync(int id, CancellationToken ct) => Task.FromResult(_db.Accounts.FirstOrDefault(a => a.Id == id));
+    public Task<Account?> GetAsync(int id, CancellationToken ct) => _db.Accounts.FirstOrDefaultAsync(a => a.Id == id, ct);
 
-    public Task<IReadOnlyList<Account>> ListAsync(TenantId tenantId, string? search, CancellationToken ct)
+    public async Task<IReadOnlyList<Account>> ListAsync(TenantId tenantId, string? search, CancellationToken ct)
     {
-        IEnumerable<Account> query = _db.Accounts.Where(x => x.TenantId == tenantId && !x.IsDeleted);
+        var query = _db.Accounts.Where(x => x.TenantId == tenantId && !x.IsDeleted);
         if (!string.IsNullOrWhiteSpace(search))
         {
             var term = search.Trim();
-            query = query.Where(x =>
-                x.Name.Contains(term, StringComparison.OrdinalIgnoreCase) ||
-                (x.Industry?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                (x.Website?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false));
+            query = query.Where(x => x.Name.Contains(term) || (x.Industry != null && x.Industry.Contains(term)) || (x.Website != null && x.Website.Contains(term)));
         }
-        return Task.FromResult<IReadOnlyList<Account>>(query.OrderBy(x => x.Name).ToList());
+        return await query.AsNoTracking().OrderBy(x => x.Name).ToListAsync(ct);
     }
 
     public Task SaveChangesAsync(CancellationToken ct) => _db.SaveChangesAsync(ct);
 
-    private static void SetId<TEntity>(TEntity entity, int id) where TEntity : Entity<int>
-        => typeof(Entity<int>).GetProperty(nameof(Entity<int>.Id), BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)!
-            .SetValue(entity, id);
 }

@@ -16,10 +16,10 @@ var builder = WebApplication.CreateBuilder(args);
 var jwtSecret = builder.Configuration["Jwt:Secret"] ?? throw new InvalidOperationException("Jwt:Secret is not configured.");
 if (jwtSecret.Length < 32) throw new InvalidOperationException("Jwt:Secret must contain at least 32 characters.");
 
-builder.Services.AddSingleton<AuthDbContext>();
-builder.Services.AddSingleton<ServiceInstanceStore>();
-builder.Services.AddSingleton<IAuthUserRepository, AuthUserRepository>();
-builder.Services.AddSingleton<ITenantRepository, TenantRepository>();
+builder.Services.AddDbContext<AuthDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddScoped<IAuthUserRepository, AuthUserRepository>();
+builder.Services.AddScoped<ITenantRepository, TenantRepository>();
 builder.Services.AddSingleton<IPasswordHasher, PasswordHasher>();
 builder.Services.AddSingleton<IJwtTokenService, JwtTokenService>();
 
@@ -83,9 +83,23 @@ builder.Services.AddSwaggerGen(options =>
 var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
+    await scope.ServiceProvider.GetRequiredService<AuthDbContext>().Database.MigrateAsync();
     await scope.ServiceProvider.GetRequiredService<AuthIntegrationDbContext>().Database.MigrateAsync();
+    var integrationDb = scope.ServiceProvider.GetRequiredService<AuthIntegrationDbContext>();
+    if (!await integrationDb.ServiceInstances.AnyAsync())
+    {
+        integrationDb.ServiceInstances.Add(new ServiceInstanceModel
+        {
+            Id = app.Configuration.GetValue<Guid>("Seed:DefaultServiceInstanceId"),
+            Name = app.Configuration["Seed:DefaultServiceInstanceName"] ?? "crm-local",
+            ApiUrl = app.Configuration["Seed:DefaultServiceInstanceUrl"] ?? "http://localhost:9040",
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow
+        });
+        await integrationDb.SaveChangesAsync();
+    }
+    await AuthDataSeeder.SeedAsync(scope.ServiceProvider.GetRequiredService<AuthDbContext>(), scope.ServiceProvider.GetRequiredService<IPasswordHasher>(), app.Configuration);
 }
-await AuthDataSeeder.SeedAsync(app.Services.GetRequiredService<AuthDbContext>(), app.Services.GetRequiredService<IPasswordHasher>(), app.Configuration);
 
 if (app.Environment.IsDevelopment()) { app.UseSwagger(); app.UseSwaggerUI(); }
 app.UseAuthentication();

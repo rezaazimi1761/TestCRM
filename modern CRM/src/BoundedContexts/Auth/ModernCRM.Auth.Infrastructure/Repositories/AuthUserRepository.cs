@@ -2,6 +2,7 @@
 using ModernCRM.Auth.Domain.ValueObjects;
 using ModernCRM.Auth.Infrastructure.Persistence;
 using ModernCRM.SharedKernel.ValueObjects;
+using Microsoft.EntityFrameworkCore;
 
 namespace ModernCRM.Auth.Infrastructure.Repositories;
 
@@ -10,32 +11,27 @@ public sealed class AuthUserRepository : IAuthUserRepository
     private readonly AuthDbContext _db;
     public AuthUserRepository(AuthDbContext db) => _db = db;
 
-    public Task AddAsync(AuthUser user, CancellationToken ct)
-    {
-        if (user.Id == 0) user.GetType().GetProperty("Id")!.SetValue(user, _db.NextUserId());
-        _db.Users.Add(user);
-        return Task.CompletedTask;
-    }
+    public async Task AddAsync(AuthUser user, CancellationToken ct) => await _db.Users.AddAsync(user, ct);
 
     public Task<bool> ExistsByEmailAsync(TenantId tenantId, string email, CancellationToken ct)
-        => Task.FromResult(_db.Users.Any(u => u.TenantId == tenantId && u.Email.Value == email.Trim().ToLowerInvariant() && !u.IsDeleted));
+        => _db.Users.AnyAsync(u => u.TenantId == tenantId && u.Email == Email.Create(email) && !u.IsDeleted, ct);
 
     public Task<AuthUser?> GetByIdAsync(int id, CancellationToken ct)
-        => Task.FromResult(_db.Users.FirstOrDefault(u => u.Id == id));
+        => _db.Users.Include(u => u.Claims).FirstOrDefaultAsync(u => u.Id == id, ct);
 
     public Task<AuthUser?> GetByUsernameAsync(TenantId tenantId, Username username, CancellationToken ct)
-        => Task.FromResult(_db.Users.FirstOrDefault(u => u.TenantId == tenantId && u.Username == username && !u.IsDeleted));
+        => _db.Users.Include(u => u.Claims).FirstOrDefaultAsync(u => u.TenantId == tenantId && u.Username == username && !u.IsDeleted, ct);
 
-    public Task<IReadOnlyList<AuthUser>> ListByTenantAsync(TenantId tenantId, string? search, int page, int pageSize, CancellationToken ct)
+    public async Task<IReadOnlyList<AuthUser>> ListByTenantAsync(TenantId tenantId, string? search, int page, int pageSize, CancellationToken ct)
     {
         var query = _db.Users.Where(u => u.TenantId == tenantId);
         if (!string.IsNullOrWhiteSpace(search))
         {
-            var s = search.Trim().ToLowerInvariant();
-            query = query.Where(u => u.Username.Value.Contains(s) || u.FirstName.ToLowerInvariant().Contains(s) || u.LastName.ToLowerInvariant().Contains(s) || u.Email.Value.Contains(s));
+            var s = search.Trim();
+            query = query.Where(u => u.FirstName.Contains(s) || u.LastName.Contains(s));
         }
 
-        return Task.FromResult<IReadOnlyList<AuthUser>>(query.Skip((page - 1) * pageSize).Take(pageSize).ToList());
+        return await query.AsNoTracking().OrderBy(u => u.Id).Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(ct);
     }
 
     public Task SaveChangesAsync(CancellationToken ct) => _db.SaveChangesAsync(ct);

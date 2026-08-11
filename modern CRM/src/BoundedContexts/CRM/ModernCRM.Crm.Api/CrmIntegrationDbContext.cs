@@ -1,5 +1,6 @@
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
+using ModernCRM.Crm.Api.Frontend;
 
 namespace ModernCRM.Crm.Api.UserSync;
 
@@ -7,6 +8,12 @@ public sealed class CrmIntegrationDbContext(DbContextOptions<CrmIntegrationDbCon
 {
     public DbSet<CrmUser> Users => Set<CrmUser>();
     public DbSet<UserSyncSagaState> UserSyncSagas => Set<UserSyncSagaState>();
+    public DbSet<AccountModel> Accounts => Set<AccountModel>();
+    public DbSet<ContactModel> Contacts => Set<ContactModel>();
+    public DbSet<LeadModel> Leads => Set<LeadModel>();
+    public DbSet<OpportunityModel> Opportunities => Set<OpportunityModel>();
+    public DbSet<TicketModel> Tickets => Set<TicketModel>();
+    public DbSet<ActivityModel> Activities => Set<ActivityModel>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -33,5 +40,22 @@ public sealed class CrmIntegrationDbContext(DbContextOptions<CrmIntegrationDbCon
             e.Property(x => x.TenantId).HasMaxLength(100).IsRequired();
             e.HasIndex(x => x.CrmUserId);
         });
+        ConfigureFrontend<AccountModel>(modelBuilder, "ModernCrmAccounts");
+        ConfigureFrontend<ContactModel>(modelBuilder, "ModernCrmContacts");
+        ConfigureFrontend<LeadModel>(modelBuilder, "ModernCrmLeads");
+        ConfigureFrontend<OpportunityModel>(modelBuilder, "ModernCrmOpportunities");
+        ConfigureFrontend<TicketModel>(modelBuilder, "ModernCrmTickets");
+        ConfigureFrontend<ActivityModel>(modelBuilder, "ModernCrmActivities");
+        modelBuilder.Entity<OpportunityModel>().Property(x => x.Value).HasPrecision(18, 2);
+    }
+
+    private static void ConfigureFrontend<TEntity>(ModelBuilder modelBuilder, string table) where TEntity : TenantModel
+    {
+        var entity = modelBuilder.Entity<TEntity>();
+        entity.ToTable(table);
+        entity.HasKey(x => x.Id);
+        entity.Property(x => x.Id).ValueGeneratedOnAdd();
+        entity.Property(x => x.TenantId).HasMaxLength(100).IsRequired();
+        entity.HasIndex(x => new { x.TenantId, x.IsDeleted });
     }
 }

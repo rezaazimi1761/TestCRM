@@ -16,12 +16,12 @@ var builder = WebApplication.CreateBuilder(args);
 var jwtSecret = builder.Configuration["Jwt:Secret"] ?? throw new InvalidOperationException("Jwt:Secret is not configured.");
 if (jwtSecret.Length < 32) throw new InvalidOperationException("Jwt:Secret must contain at least 32 characters.");
 
-builder.Services.AddSingleton<CrmDbContext>();
-builder.Services.AddSingleton<FrontendCrmStore>();
-builder.Services.AddSingleton<IAccountRepository, AccountRepository>();
-builder.Services.AddSingleton<IContactRepository, ContactRepository>();
-builder.Services.AddSingleton<ITicketRepository, TicketRepository>();
-builder.Services.AddSingleton<IOpportunityRepository, OpportunityRepository>();
+builder.Services.AddDbContext<CrmDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddScoped<IAccountRepository, AccountRepository>();
+builder.Services.AddScoped<IContactRepository, ContactRepository>();
+builder.Services.AddScoped<ITicketRepository, TicketRepository>();
+builder.Services.AddScoped<IOpportunityRepository, OpportunityRepository>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentTenantProvider, CurrentTenantProvider>();
 builder.Services.AddDbContext<CrmIntegrationDbContext>(options =>
@@ -111,6 +111,7 @@ builder.Services.AddSwaggerGen(options =>
 var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
+    await scope.ServiceProvider.GetRequiredService<CrmDbContext>().Database.MigrateAsync();
     await scope.ServiceProvider.GetRequiredService<CrmIntegrationDbContext>().Database.MigrateAsync();
 }
 if (app.Environment.IsDevelopment()) { app.UseSwagger(); app.UseSwaggerUI(); }
