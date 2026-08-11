@@ -1,4 +1,5 @@
 using ModernCRM.Crm.Api.UserSync;
+using ModernCRM.Crm.Api.Consumers;
 using Microsoft.EntityFrameworkCore;
 using MassTransit;
 using ModernCRM.Crm.Api.Frontend;
@@ -104,7 +105,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
 });
 builder.Services.AddAuthorization();
 builder.Services.AddProblemDetails();
-builder.Services.AddExceptionHandler<ModernCRM.Crm.Api.DomainExceptionHandler>();
+builder.Services.AddExceptionHandler<ModernCRM.Crm.Api.ExceptionHandling.DomainExceptionHandler>();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>

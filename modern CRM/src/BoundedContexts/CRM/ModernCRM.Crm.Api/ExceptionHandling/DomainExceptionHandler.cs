@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using ModernCRM.SharedKernel.BuildingBlocks;
 
-namespace ModernCRM.Crm.Api;
+namespace ModernCRM.Crm.Api.ExceptionHandling;
 
 public sealed class DomainExceptionHandler(IProblemDetailsService problemDetails) : IExceptionHandler
 {

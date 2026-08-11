@@ -3,7 +3,9 @@ using Microsoft.EntityFrameworkCore;
 using ModernCRM.Auth.Application.Handlers;
 using ModernCRM.SharedKernel.IntegrationEvents;
 
-namespace ModernCRM.Auth.Api.UserSync;
+using ModernCRM.Auth.Api.UserSync;
+
+namespace ModernCRM.Auth.Api.Consumers;
 
 public sealed class SyncUserToAuthConsumer(AuthIntegrationDbContext db, IPasswordHasher hasher) : IConsumer<SyncUserToAuth>
 {
