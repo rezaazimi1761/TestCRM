@@ -12,7 +12,7 @@ public sealed record Email : ValueObject
 
     public static Email Create(string value)
     {
-        if (string.IsNullOrWhiteSpace(value) || !Pattern.IsMatch(value.Trim()))
+        if (string.IsNullOrWhiteSpace(value) || value.Trim().Length > 200 || !Pattern.IsMatch(value.Trim()))
             throw new ArgumentException("Email is not valid.", nameof(value));
         return new Email(value.Trim().ToLowerInvariant());
     }

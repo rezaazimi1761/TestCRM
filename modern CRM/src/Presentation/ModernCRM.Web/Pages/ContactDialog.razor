@@ -6,31 +6,31 @@
             <MudGrid>
                 <MudItem xs="6">
                     <MudTextField @bind-Value="_model.FirstName" Label="First Name"
-                                  Variant="Variant.Outlined" Required="true" />
+                                  Variant="Variant.Outlined" Required="true" RequiredError="First name is required" MaxLength="100" />
                 </MudItem>
                 <MudItem xs="6">
                     <MudTextField @bind-Value="_model.LastName" Label="Last Name"
-                                  Variant="Variant.Outlined" Required="true" />
+                                  Variant="Variant.Outlined" Required="true" RequiredError="Last name is required" MaxLength="100" />
                 </MudItem>
                 <MudItem xs="12">
                     <MudTextField @bind-Value="_model.Email" Label="Email"
-                                  Variant="Variant.Outlined" InputType="InputType.Email" Required="true" />
+                                  Variant="Variant.Outlined" InputType="InputType.Email" Required="true" RequiredError="Email is required" MaxLength="200" Validation="@(new Func<string, string>(FormValidation.Email))" />
                 </MudItem>
                 <MudItem xs="6">
                     <MudTextField @bind-Value="_model.Phone" Label="Phone"
-                                  Variant="Variant.Outlined" />
+                                  Variant="Variant.Outlined" MaxLength="30" Validation="@(new Func<string, string>(FormValidation.Phone))" />
                 </MudItem>
                 <MudItem xs="6">
                     <MudTextField @bind-Value="_model.Company" Label="Company"
-                                  Variant="Variant.Outlined" />
+                                  Variant="Variant.Outlined" MaxLength="200" />
                 </MudItem>
                 <MudItem xs="6">
                     <MudTextField @bind-Value="_model.JobTitle" Label="Job Title"
-                                  Variant="Variant.Outlined" />
+                                  Variant="Variant.Outlined" MaxLength="150" />
                 </MudItem>
                 <MudItem xs="12">
                     <MudTextField @bind-Value="_model.Notes" Label="Notes"
-                                  Variant="Variant.Outlined" Lines="2" />
+                                  Variant="Variant.Outlined" Lines="2" MaxLength="4000" />
                 </MudItem>
             </MudGrid>
         </MudForm>

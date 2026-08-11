@@ -1,5 +1,6 @@
 ﻿using ModernCRM.SharedKernel.BuildingBlocks;
 using ModernCRM.SharedKernel.ValueObjects;
+using ModernCRM.Crm.Domain.ValueObjects;
 
 namespace ModernCRM.Crm.Domain.Accounts;
 
@@ -38,10 +39,10 @@ public sealed class Account : AggregateRoot<int>
     public void ChangeProfile(string? industry, string? website, string? phone, string? address)
     {
         EnsureActive();
-        Industry = string.IsNullOrWhiteSpace(industry) ? null : industry.Trim();
-        Website = string.IsNullOrWhiteSpace(website) ? null : website.Trim();
-        Phone = string.IsNullOrWhiteSpace(phone) ? null : phone.Trim();
-        Address = string.IsNullOrWhiteSpace(address) ? null : address.Trim();
+        Industry = Guard.OptionalText(industry, nameof(Industry), 100);
+        Website = string.IsNullOrWhiteSpace(website) ? null : WebAddress.Create(website).Value;
+        Phone = string.IsNullOrWhiteSpace(phone) ? null : PhoneNumber.Create(phone).Value;
+        Address = Guard.OptionalText(address, nameof(Address), 500);
         Touch();
     }
 

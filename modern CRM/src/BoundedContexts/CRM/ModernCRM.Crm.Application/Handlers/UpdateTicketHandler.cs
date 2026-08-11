@@ -24,6 +24,7 @@ public sealed class UpdateTicketHandler : ICommandHandler<UpdateTicketCommand, b
 
         ticket.ChangeSubject(command.Subject);
         ticket.ChangeDescription(command.Description);
+        ticket.Reschedule(command.DueDate);
         ticket.ChangePriority(Enum.Parse<TicketPriority>(command.Priority, true));
         if (command.ContactId is > 0) ticket.LinkContact(command.ContactId.Value);
         if (command.AssignedToAuthUserId is > 0) ticket.AssignToUser(command.AssignedToAuthUserId.Value);

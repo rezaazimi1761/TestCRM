@@ -5,11 +5,12 @@
         <MudForm @ref="_form" @bind-IsValid="_isValid">
             <MudTextField @bind-Value="_model.Slug"
                           Label="Slug" Variant="Variant.Outlined" Required="true"
+                          RequiredError="Slug is required" MaxLength="100" Validation="@(new Func<string, string>(FormValidation.Slug))"
                           HelperText="lowercase, e.g. 'acme'"
                           Disabled="@(_model.Id != 0)" />
 
             <MudTextField @bind-Value="_model.DisplayName" Class="mt-3"
-                          Label="Display Name" Variant="Variant.Outlined" Required="true" />
+                          Label="Display Name" Variant="Variant.Outlined" Required="true" RequiredError="Display name is required" MaxLength="200" />
 
             <MudSelect T="Guid" @bind-Value="_model.ServiceInstanceId" Class="mt-3"
                        Label="Service Instance" Variant="Variant.Outlined" Required="true">
@@ -21,7 +22,7 @@
 
             <MudTextField @bind-Value="_model.Description" Class="mt-3"
                           Label="Description" Variant="Variant.Outlined"
-                          Lines="2" />
+                          Lines="2" MaxLength="2000" />
 
             @if (_model.Id != 0)
             {

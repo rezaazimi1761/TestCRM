@@ -19,6 +19,8 @@ public sealed class Opportunity : AggregateRoot<int>
 
     public static Opportunity Create(TenantId tenantId, string title, Money value, int? accountId = null, DateTime? expectedCloseDate = null)
     {
+        Guard.Against(accountId.HasValue && accountId.Value <= 0, "Account id is invalid.");
+        Guard.Against(expectedCloseDate.HasValue && expectedCloseDate.Value.Date < DateTime.UtcNow.Date, "Expected close date cannot be in the past.");
         var opportunity = new Opportunity { TenantId = tenantId, Value = value, AccountId = accountId, ExpectedCloseDate = expectedCloseDate };
         opportunity.Rename(title);
         opportunity.Raise(new OpportunityCreatedDomainEvent(opportunity.Id, tenantId.Value, opportunity.Title));
@@ -27,12 +29,21 @@ public sealed class Opportunity : AggregateRoot<int>
 
     public void Rename(string title) { EnsureOpen(); Title = Guard.NotBlank(title, nameof(Title), 255); Touch(); }
     public void ChangeValue(Money value) { EnsureOpen(); Value = value; Touch(); }
+    public void ChangeExpectedCloseDate(DateTime? value) { EnsureOpen(); Guard.Against(value.HasValue && value.Value.Date < DateTime.UtcNow.Date, "Expected close date cannot be in the past."); ExpectedCloseDate = value; Touch(); }
     public void LinkContact(int contactId) { EnsureOpen(); Guard.Against(contactId <= 0, "Contact id is invalid."); ContactId = contactId; Touch(); }
 
     public void MoveTo(OpportunityStage stage)
     {
         EnsureOpen();
-        Guard.Against(Stage == OpportunityStage.Prospecting && stage == OpportunityStage.Negotiation, "Opportunity must be qualified before negotiation.");
+        var allowed = Stage switch
+        {
+            OpportunityStage.Prospecting => stage is OpportunityStage.Qualification or OpportunityStage.ClosedLost,
+            OpportunityStage.Qualification => stage is OpportunityStage.Proposal or OpportunityStage.ClosedLost,
+            OpportunityStage.Proposal => stage is OpportunityStage.Negotiation or OpportunityStage.ClosedWon or OpportunityStage.ClosedLost,
+            OpportunityStage.Negotiation => stage is OpportunityStage.ClosedWon or OpportunityStage.ClosedLost,
+            _ => false
+        };
+        Guard.Against(!allowed, $"Cannot move opportunity from {Stage} to {stage}.");
         Stage = stage;
         Touch();
         Raise(new OpportunityStageChangedDomainEvent(Id, stage));

@@ -1,3 +1,2 @@
-namespace ModernCRM.Crm.Api.Controllers;
-
-public sealed record CreateCrmUserPayload(string? Username, string? Email, string? FirstName, string? LastName, string? Password, string? Role);
+using System.ComponentModel.DataAnnotations; namespace ModernCRM.Crm.Api.Controllers;
+public sealed record CreateCrmUserPayload([Required,RegularExpression("^[a-zA-Z0-9][a-zA-Z0-9._-]*$"),StringLength(100,MinimumLength=3)]string? Username,[Required,EmailAddress,StringLength(200)]string? Email,[Required,StringLength(100)]string? FirstName,[Required,StringLength(100)]string? LastName,[Required,StringLength(128,MinimumLength=8),RegularExpression("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^a-zA-Z0-9]).+$")]string? Password,[Required,RegularExpression("^(User|Admin|SuperUser)$")]string? Role);

@@ -1,3 +1,2 @@
-namespace ModernCRM.Crm.Api.Controllers;
-
-public sealed record ContactPayload(string? FirstName, string? LastName, string? Email, string? Phone, string? Company, string? JobTitle, string? Notes, int? AccountId);
+using System.ComponentModel.DataAnnotations; namespace ModernCRM.Crm.Api.Controllers;
+public sealed record ContactPayload([Required,StringLength(100)]string? FirstName,[Required,StringLength(100)]string? LastName,[Required,EmailAddress,StringLength(200)]string? Email,[Phone,StringLength(30)]string? Phone,[StringLength(200)]string? Company,[StringLength(150)]string? JobTitle,[StringLength(4000)]string? Notes,[Range(1,int.MaxValue)]int? AccountId);

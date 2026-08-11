@@ -99,12 +99,14 @@
                 <MudTextField @bind-Value="_model.TenantId"
                               Label="Tenant" Variant="Variant.Outlined"
                               Required="true" RequiredError="Tenant is required"
+                              MaxLength="100" Validation="@(new Func<string, string>(FormValidation.Slug))"
                               Adornment="Adornment.Start"
                               AdornmentIcon="@Icons.Material.Rounded.Domain" />
 
                 <MudTextField @bind-Value="_model.Username"
                               Label="Username" Variant="Variant.Outlined"
                               Required="true" RequiredError="Username is required"
+                              MaxLength="100" Validation="@(new Func<string, string>(FormValidation.Username))"
                               Adornment="Adornment.Start"
                               AdornmentIcon="@Icons.Material.Rounded.Person" />
 
@@ -112,6 +114,7 @@
                               Label="Password" Variant="Variant.Outlined"
                               InputType="@_pwdType"
                               Required="true" RequiredError="Password is required"
+                              MaxLength="128"
                               Adornment="Adornment.End"
                               AdornmentIcon="@_pwdIcon"
                               OnAdornmentClick="TogglePassword" />

@@ -23,6 +23,7 @@ public sealed class UpdateOpportunityHandler : ICommandHandler<UpdateOpportunity
         if (opportunity is null) return false;
         opportunity.Rename(command.Title);
         opportunity.ChangeValue(Money.Create(command.Value));
+        opportunity.ChangeExpectedCloseDate(command.ExpectedCloseDate);
         if (command.ContactId is > 0) opportunity.LinkContact(command.ContactId.Value);
         if (Enum.TryParse<OpportunityStage>(command.Stage, true, out var stage) && stage != opportunity.Stage)
             opportunity.MoveTo(stage);

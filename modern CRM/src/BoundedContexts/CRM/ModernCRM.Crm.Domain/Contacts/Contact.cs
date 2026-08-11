@@ -1,5 +1,6 @@
 ﻿using ModernCRM.SharedKernel.BuildingBlocks;
 using ModernCRM.SharedKernel.ValueObjects;
+using ModernCRM.Crm.Domain.ValueObjects;
 
 namespace ModernCRM.Crm.Domain.Contacts;
 
@@ -34,8 +35,8 @@ public sealed class Contact : AggregateRoot<int>
     }
 
     public void ChangeEmail(Email email) { EnsureActive(); Email = email; Touch(); }
-    public void ChangePhone(string? phone) { EnsureActive(); Phone = string.IsNullOrWhiteSpace(phone) ? null : phone.Trim(); Touch(); }
-    public void ChangeJobTitle(string? jobTitle) { EnsureActive(); JobTitle = string.IsNullOrWhiteSpace(jobTitle) ? null : jobTitle.Trim(); Touch(); }
+    public void ChangePhone(string? phone) { EnsureActive(); Phone = string.IsNullOrWhiteSpace(phone) ? null : PhoneNumber.Create(phone).Value; Touch(); }
+    public void ChangeJobTitle(string? jobTitle) { EnsureActive(); JobTitle = Guard.OptionalText(jobTitle, nameof(JobTitle), 150); Touch(); }
 
     public void AssignToAccount(int accountId)
     {

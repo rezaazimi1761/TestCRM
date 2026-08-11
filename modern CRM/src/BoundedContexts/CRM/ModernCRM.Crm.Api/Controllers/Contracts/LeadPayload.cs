@@ -1,3 +1,2 @@
-namespace ModernCRM.Crm.Api.Controllers;
-
-public sealed record LeadPayload(string? FirstName, string? LastName, string? Email, string? Phone, string? Company, string? Status, string? Source, string? Notes);
+using System.ComponentModel.DataAnnotations; namespace ModernCRM.Crm.Api.Controllers;
+public sealed record LeadPayload([Required,StringLength(100)]string? FirstName,[Required,StringLength(100)]string? LastName,[Required,EmailAddress,StringLength(200)]string? Email,[Phone,StringLength(30)]string? Phone,[StringLength(200)]string? Company,[RegularExpression("^(New|Contacted|Qualified|Lost|Converted)$")]string? Status,[StringLength(100)]string? Source,[StringLength(4000)]string? Notes);

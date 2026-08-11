@@ -16,6 +16,7 @@
                     <MudTextField @bind-Value="_model.Subject" Label="Subject"
                                   Variant="Variant.Outlined" Required="true"
                                   RequiredError="Subject is required"
+                                  MaxLength="255"
                                   Adornment="Adornment.Start"
                                   AdornmentIcon="@Icons.Material.Rounded.Title" />
                 </MudItem>
@@ -73,7 +74,7 @@
                 @* Category *@
                 <MudItem xs="6">
                     <MudTextField @bind-Value="_model.Category" Label="Category"
-                                  Variant="Variant.Outlined"
+                                  Variant="Variant.Outlined" MaxLength="100"
                                   Adornment="Adornment.Start"
                                   AdornmentIcon="@Icons.Material.Rounded.Label" />
                 </MudItem>
@@ -82,13 +83,13 @@
                 <MudItem xs="6">
                     <MudDatePicker @bind-Date="_model.DueDate" Label="Due Date"
                                    Variant="Variant.Outlined" Editable="true"
-                                   DateFormat="yyyy-MM-dd" />
+                                   DateFormat="yyyy-MM-dd" Validation="@(new Func<DateTime?, string>(FormValidation.NotPast))" />
                 </MudItem>
 
                 @* Description *@
                 <MudItem xs="12">
                     <MudTextField @bind-Value="_model.Description" Label="Description"
-                                  Variant="Variant.Outlined" Lines="3"
+                                  Variant="Variant.Outlined" Lines="3" MaxLength="4000"
                                   Adornment="Adornment.Start"
                                   AdornmentIcon="@Icons.Material.Rounded.Description" />
                 </MudItem>
@@ -96,7 +97,7 @@
                 @* Notes *@
                 <MudItem xs="12">
                     <MudTextField @bind-Value="_model.Notes" Label="Notes"
-                                  Variant="Variant.Outlined" Lines="2"
+                                  Variant="Variant.Outlined" Lines="2" MaxLength="4000"
                                   Adornment="Adornment.Start"
                                   AdornmentIcon="@Icons.Material.Rounded.StickyNote2" />
                 </MudItem>

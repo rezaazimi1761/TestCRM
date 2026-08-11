@@ -30,7 +30,8 @@ public sealed class Ticket : AggregateRoot<int>
     }
 
     public void ChangeSubject(string subject) { EnsureNotFinal(); Subject = Guard.NotBlank(subject, nameof(Subject), 255); Touch(); }
-    public void ChangeDescription(string? description) { EnsureNotFinal(); Description = string.IsNullOrWhiteSpace(description) ? null : description.Trim(); Touch(); }
+    public void ChangeDescription(string? description) { EnsureNotFinal(); Description = Guard.OptionalText(description, nameof(Description), 4000); Touch(); }
+    public void Reschedule(DateTime? dueDate) { EnsureNotFinal(); Guard.Against(dueDate.HasValue && dueDate.Value.Date < DateTime.UtcNow.Date, "Due date cannot be in the past."); DueDate = dueDate; Touch(); }
     public void AssignToUser(int authUserId) { EnsureNotFinal(); Guard.Against(authUserId <= 0, "User id is invalid."); AssignedToAuthUserId = authUserId; Touch(); }
     public void LinkContact(int contactId) { EnsureNotFinal(); Guard.Against(contactId <= 0, "Contact id is invalid."); ContactId = contactId; Touch(); }
 

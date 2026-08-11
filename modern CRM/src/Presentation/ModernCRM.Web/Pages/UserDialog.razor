@@ -25,6 +25,7 @@
                         <MudTextField @bind-Value="_model.Username" Label="Username"
                                       Variant="Variant.Outlined" Required="true"
                                       RequiredError="Username is required"
+                                      MaxLength="100" Validation="@(new Func<string, string>(FormValidation.Username))"
                                       Adornment="Adornment.Start"
                                       AdornmentIcon="@Icons.Material.Rounded.AlternateEmail" />
                     </MudItem>
@@ -32,6 +33,7 @@
                         <MudTextField @bind-Value="_model.Password" Label="Password"
                                       Variant="Variant.Outlined" Required="true"
                                       RequiredError="Password is required"
+                                      MaxLength="128" Validation="@(new Func<string, string>(FormValidation.Password))"
                                       InputType="InputType.Password"
                                       Adornment="Adornment.Start"
                                       AdornmentIcon="@Icons.Material.Rounded.Key" />
@@ -52,17 +54,18 @@
                 <MudItem xs="6">
                     <MudTextField @bind-Value="_model.FirstName" Label="First Name"
                                   Variant="Variant.Outlined" Required="true"
-                                  RequiredError="First name is required" />
+                                  RequiredError="First name is required" MaxLength="100" />
                 </MudItem>
                 <MudItem xs="6">
                     <MudTextField @bind-Value="_model.LastName" Label="Last Name"
                                   Variant="Variant.Outlined" Required="true"
-                                  RequiredError="Last name is required" />
+                                  RequiredError="Last name is required" MaxLength="100" />
                 </MudItem>
                 <MudItem xs="12">
                     <MudTextField @bind-Value="_model.Email" Label="Email"
                                   Variant="Variant.Outlined" InputType="InputType.Email"
                                   Required="true" RequiredError="Email is required"
+                                  MaxLength="200" Validation="@(new Func<string, string>(FormValidation.Email))"
                                   Adornment="Adornment.Start"
                                   AdornmentIcon="@Icons.Material.Rounded.Email" />
                 </MudItem>

@@ -7,6 +7,7 @@ using ModernCRM.Auth.Domain.Users;
 using ModernCRM.Auth.Domain.ValueObjects;
 using ModernCRM.SharedKernel.Application;
 using ModernCRM.SharedKernel.ValueObjects;
+using ModernCRM.SharedKernel.BuildingBlocks;
 
 namespace ModernCRM.Auth.Application.Handlers;
 
@@ -41,8 +42,8 @@ public sealed class CreateUserHandler : ICommandHandler<CreateUserCommand, int>
             Email.Create(command.Email),
             command.FirstName,
             command.LastName,
-            PasswordHash.FromHash(_hasher.Hash(command.Password)),
-            Enum.Parse<Role>(command.Role, true));
+            PasswordHash.FromHash(_hasher.Hash(Password.Create(command.Password).Value)),
+            Guard.ValidEnum<Role>(command.Role, nameof(command.Role)));
 
         await _users.AddAsync(user, ct);
         await _users.SaveChangesAsync(ct);

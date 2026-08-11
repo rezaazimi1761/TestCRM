@@ -6,11 +6,11 @@
             <MudGrid>
                 <MudItem xs="12">
                     <MudTextField @bind-Value="_model.Title" Label="Title"
-                                  Variant="Variant.Outlined" Required="true" />
+                                  Variant="Variant.Outlined" Required="true" RequiredError="Title is required" MaxLength="255" />
                 </MudItem>
                 <MudItem xs="6">
                     <MudNumericField T="decimal" @bind-Value="_model.Value" Label="Value"
-                                     Variant="Variant.Outlined" Format="F2" />
+                                     Variant="Variant.Outlined" Format="F2" Min="0" Validation="@(new Func<decimal, string>(FormValidation.NonNegative))" />
                 </MudItem>
                 <MudItem xs="6">
                     <MudSelect T="string" @bind-Value="_model.Stage" Label="Stage"
@@ -25,11 +25,11 @@
                 </MudItem>
                 <MudItem xs="12">
                     <MudDatePicker @bind-Date="_model.ExpectedCloseDate" Label="Expected Close Date"
-                                   Variant="Variant.Outlined" />
+                                   Variant="Variant.Outlined" Validation="@(new Func<DateTime?, string>(FormValidation.NotPast))" />
                 </MudItem>
                 <MudItem xs="12">
                     <MudTextField @bind-Value="_model.Notes" Label="Notes"
-                                  Variant="Variant.Outlined" Lines="2" />
+                                  Variant="Variant.Outlined" Lines="2" MaxLength="4000" />
                 </MudItem>
             </MudGrid>
         </MudForm>
