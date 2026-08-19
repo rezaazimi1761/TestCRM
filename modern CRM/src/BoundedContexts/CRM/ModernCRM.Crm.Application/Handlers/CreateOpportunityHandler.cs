@@ -24,7 +24,7 @@ public sealed class CreateOpportunityHandler : ICommandHandler<CreateOpportunity
         if (Enum.TryParse<OpportunityStage>(command.Stage, true, out var stage) && stage != OpportunityStage.Prospecting)
             opportunity.MoveTo(stage);
         await _opportunities.AddAsync(opportunity, ct);
-        await _opportunities.SaveChangesAsync(ct);
+        await _opportunities.UnitOfWork.SaveChangesAsync(ct);
         return opportunity.Id;
     }
 }

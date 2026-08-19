@@ -2,4 +2,4 @@ using ModernCRM.SharedKernel.Application;
 
 namespace ModernCRM.Crm.Application.Commands;
 
-public sealed record DeleteTicketCommand(int Id) : ICommand<bool>;
+public sealed record DeleteTicketCommand(string TenantId, int Id) : ICommand<bool>;

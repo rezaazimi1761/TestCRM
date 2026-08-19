@@ -19,14 +19,14 @@ public sealed class UpdateContactHandler : ICommandHandler<UpdateContactCommand,
 
     public async Task<bool> Handle(UpdateContactCommand command, CancellationToken ct)
     {
-        var contact = await _contacts.GetAsync(command.Id, ct);
+        var contact = await _contacts.GetAsync(TenantId.Create(command.TenantId), command.Id, ct);
         if (contact is null) return false;
         contact.ChangeName(command.FirstName, command.LastName);
         contact.ChangeEmail(Email.Create(command.Email));
         contact.ChangePhone(command.Phone);
         contact.ChangeJobTitle(command.JobTitle);
         if (command.AccountId is > 0) contact.AssignToAccount(command.AccountId.Value);
-        await _contacts.SaveChangesAsync(ct);
+        await _contacts.UnitOfWork.SaveChangesAsync(ct);
         return true;
     }
 }

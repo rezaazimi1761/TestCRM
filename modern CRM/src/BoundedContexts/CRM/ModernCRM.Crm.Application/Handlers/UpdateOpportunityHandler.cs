@@ -19,7 +19,7 @@ public sealed class UpdateOpportunityHandler : ICommandHandler<UpdateOpportunity
 
     public async Task<bool> Handle(UpdateOpportunityCommand command, CancellationToken ct)
     {
-        var opportunity = await _opportunities.GetAsync(command.Id, ct);
+        var opportunity = await _opportunities.GetAsync(TenantId.Create(command.TenantId), command.Id, ct);
         if (opportunity is null) return false;
         opportunity.Rename(command.Title);
         opportunity.ChangeValue(Money.Create(command.Value));
@@ -27,7 +27,7 @@ public sealed class UpdateOpportunityHandler : ICommandHandler<UpdateOpportunity
         if (command.ContactId is > 0) opportunity.LinkContact(command.ContactId.Value);
         if (Enum.TryParse<OpportunityStage>(command.Stage, true, out var stage) && stage != opportunity.Stage)
             opportunity.MoveTo(stage);
-        await _opportunities.SaveChangesAsync(ct);
+        await _opportunities.UnitOfWork.SaveChangesAsync(ct);
         return true;
     }
 }

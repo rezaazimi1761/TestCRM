@@ -46,7 +46,7 @@ public sealed class CreateUserHandler : ICommandHandler<CreateUserCommand, int>
             Guard.ValidEnum<Role>(command.Role, nameof(command.Role)));
 
         await _users.AddAsync(user, ct);
-        await _users.SaveChangesAsync(ct);
+        await _users.UnitOfWork.SaveChangesAsync(ct);
         return user.Id;
     }
 }

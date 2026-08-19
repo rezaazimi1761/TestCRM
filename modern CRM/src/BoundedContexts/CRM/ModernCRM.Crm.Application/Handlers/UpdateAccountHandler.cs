@@ -19,11 +19,11 @@ public sealed class UpdateAccountHandler : ICommandHandler<UpdateAccountCommand,
 
     public async Task<bool> Handle(UpdateAccountCommand command, CancellationToken ct)
     {
-        var account = await _accounts.GetAsync(command.Id, ct);
+        var account = await _accounts.GetAsync(TenantId.Create(command.TenantId), command.Id, ct);
         if (account is null) return false;
         account.Rename(command.Name);
         account.ChangeProfile(command.Industry, command.Website, command.Phone, command.Address);
-        await _accounts.SaveChangesAsync(ct);
+        await _accounts.UnitOfWork.SaveChangesAsync(ct);
         return true;
     }
 }

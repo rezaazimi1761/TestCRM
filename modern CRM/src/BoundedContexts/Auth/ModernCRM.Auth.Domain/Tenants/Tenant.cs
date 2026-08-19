@@ -10,13 +10,14 @@ public sealed class Tenant : AggregateRoot<int>
     public Guid ServiceInstanceId { get; private set; }
     public bool IsActive { get; private set; } = true;
     public bool IsDeleted { get; private set; }
+    public DateTime CreatedAtUtc { get; private set; }
 
     private Tenant() { }
 
     public static Tenant Create(TenantId tenantId, string displayName, Guid serviceInstanceId)
     {
         Guard.Against(serviceInstanceId == Guid.Empty, "Tenant must be assigned to a service instance.");
-        return new Tenant { TenantId = tenantId, DisplayName = Guard.NotBlank(displayName, nameof(DisplayName), 200), ServiceInstanceId = serviceInstanceId, IsActive = true };
+        return new Tenant { TenantId = tenantId, DisplayName = Guard.NotBlank(displayName, nameof(DisplayName), 200), ServiceInstanceId = serviceInstanceId, IsActive = true, CreatedAtUtc = DateTime.UtcNow };
     }
 
     public void Rename(string displayName) { EnsureNotDeleted(); DisplayName = Guard.NotBlank(displayName, nameof(DisplayName), 200); Touch(); }

@@ -19,10 +19,10 @@ public sealed class DeleteOpportunityHandler : ICommandHandler<DeleteOpportunity
 
     public async Task<bool> Handle(DeleteOpportunityCommand command, CancellationToken ct)
     {
-        var opportunity = await _opportunities.GetAsync(command.Id, ct);
+        var opportunity = await _opportunities.GetAsync(TenantId.Create(command.TenantId), command.Id, ct);
         if (opportunity is null) return false;
         opportunity.Delete();
-        await _opportunities.SaveChangesAsync(ct);
+        await _opportunities.UnitOfWork.SaveChangesAsync(ct);
         return true;
     }
 }

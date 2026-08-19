@@ -3,17 +3,19 @@ using ModernCRM.Crm.Domain.Repositories;
 using ModernCRM.Crm.Infrastructure.Persistence;
 using ModernCRM.SharedKernel.ValueObjects;
 using Microsoft.EntityFrameworkCore;
+using ModernCRM.SharedKernel.Application;
 
 namespace ModernCRM.Crm.Infrastructure.Repositories;
 
 public sealed class AccountRepository : IAccountRepository
 {
     private readonly CrmDbContext _db;
-    public AccountRepository(CrmDbContext db) => _db = db;
+    public AccountRepository(CrmDbContext db) { _db = db; UnitOfWork = new EfUnitOfWork(db); }
+    public IUnitOfWork UnitOfWork { get; }
 
     public async Task AddAsync(Account account, CancellationToken ct) => await _db.Accounts.AddAsync(account, ct);
 
-    public Task<Account?> GetAsync(int id, CancellationToken ct) => _db.Accounts.FirstOrDefaultAsync(a => a.Id == id, ct);
+    public Task<Account?> GetAsync(TenantId tenantId, int id, CancellationToken ct) => _db.Accounts.FirstOrDefaultAsync(a => a.Id == id && a.TenantId == tenantId && !a.IsDeleted, ct);
 
     public async Task<IReadOnlyList<Account>> ListAsync(TenantId tenantId, string? search, CancellationToken ct)
     {
@@ -25,7 +27,5 @@ public sealed class AccountRepository : IAccountRepository
         }
         return await query.AsNoTracking().OrderBy(x => x.Name).ToListAsync(ct);
     }
-
-    public Task SaveChangesAsync(CancellationToken ct) => _db.SaveChangesAsync(ct);
 
 }

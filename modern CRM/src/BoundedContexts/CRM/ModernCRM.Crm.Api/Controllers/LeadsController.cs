@@ -1,11 +1,35 @@
-using Microsoft.AspNetCore.Mvc;using Microsoft.EntityFrameworkCore;using ModernCRM.Crm.Api.Frontend;using ModernCRM.Crm.Api.UserSync;
+using Microsoft.AspNetCore.Mvc;
+using ModernCRM.Crm.Api.Frontend;
+using ModernCRM.Crm.Application.Frontend;
+
 namespace ModernCRM.Crm.Api.Controllers;
-[ApiController,Route("api/leads")] public sealed class LeadsController(CrmIntegrationDbContext db):ControllerBase
+
+[ApiController, Route("api/leads")]
+public sealed class LeadsController(ILeadService service) : ControllerBase
 {
- [HttpGet] public async Task<IActionResult> GetAll(int page=1,int pageSize=20,string? sortBy=null,bool sortDesc=false,string? search=null,string? status=null,CancellationToken ct=default){var q=db.Leads.Where(x=>x.TenantId==FrontendApi.Tenant(User)&&!x.IsDeleted);if(!string.IsNullOrWhiteSpace(search))q=q.Where(x=>(x.FirstName!=null&&x.FirstName.Contains(search))||(x.LastName!=null&&x.LastName.Contains(search))||(x.Email!=null&&x.Email.Contains(search))||(x.Company!=null&&x.Company.Contains(search)));if(!string.IsNullOrWhiteSpace(status))q=q.Where(x=>x.Status==status);return Ok(await FrontendApi.PageAsync(q,page,pageSize,sortBy,sortDesc,ct));}
- [HttpGet("{id:int}")] public async Task<IActionResult> Get(int id,CancellationToken ct)=>await Find(id,ct) is{}x?Ok(x):NotFound();
- [HttpPost] public async Task<IActionResult> Create(LeadPayload r,CancellationToken ct){if(string.IsNullOrWhiteSpace(r.FirstName)||string.IsNullOrWhiteSpace(r.LastName)||string.IsNullOrWhiteSpace(r.Email))return BadRequest(new{message="First name, last name and email are required."});var x=new LeadModel{TenantId=FrontendApi.Tenant(User),FirstName=r.FirstName,LastName=r.LastName,Email=r.Email,Phone=r.Phone,Company=r.Company,Status=r.Status??"New",Source=r.Source,Notes=r.Notes};db.Leads.Add(x);await db.SaveChangesAsync(ct);return CreatedAtAction(nameof(Get),new{id=x.Id},x.Id);}
- [HttpPut("{id:int}")] public async Task<IActionResult> Update(int id,LeadPayload r,CancellationToken ct){var x=await Find(id,ct);if(x is null)return NotFound();x.FirstName=r.FirstName;x.LastName=r.LastName;x.Email=r.Email;x.Phone=r.Phone;x.Company=r.Company;x.Status=r.Status??x.Status;x.Source=r.Source;x.Notes=r.Notes;await db.SaveChangesAsync(ct);return NoContent();}
- [HttpDelete("{id:int}")] public async Task<IActionResult> Delete(int id,CancellationToken ct){var x=await Find(id,ct);if(x is null)return NotFound();x.IsDeleted=true;await db.SaveChangesAsync(ct);return NoContent();}
- private Task<LeadModel?> Find(int id,CancellationToken ct)=>db.Leads.FirstOrDefaultAsync(x=>x.Id==id&&x.TenantId==FrontendApi.Tenant(User)&&!x.IsDeleted,ct);
+    [HttpGet]
+    public async Task<IActionResult> GetAll(int page = 1, int pageSize = 20, string? sortBy = null, bool sortDesc = false, string? search = null, string? status = null, CancellationToken ct = default)
+        => Ok(await service.GetPageAsync(Tenant(), page, pageSize, sortBy, sortDesc, search, status, ct));
+
+    [HttpGet("{id:int}")]
+    public async Task<IActionResult> Get(int id, CancellationToken ct)
+        => await service.GetAsync(Tenant(), id, ct) is { } item ? Ok(item) : NotFound();
+
+    [HttpPost]
+    public async Task<IActionResult> Create(LeadPayload request, CancellationToken ct)
+    {
+        var id = await service.CreateAsync(Tenant(), ToInput(request), ct);
+        return CreatedAtAction(nameof(Get), new { id }, id);
+    }
+
+    [HttpPut("{id:int}")]
+    public async Task<IActionResult> Update(int id, LeadPayload request, CancellationToken ct)
+        => await service.UpdateAsync(Tenant(), id, ToInput(request), ct) ? NoContent() : NotFound();
+
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> Delete(int id, CancellationToken ct)
+        => await service.DeleteAsync(Tenant(), id, ct) ? NoContent() : NotFound();
+
+    private string Tenant() => FrontendApi.Tenant(User);
+    private static LeadInput ToInput(LeadPayload request) => new(request.FirstName, request.LastName, request.Email, request.Phone, request.Company, request.Status, request.Source, request.Notes);
 }

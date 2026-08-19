@@ -17,7 +17,7 @@ public sealed class GetUserByIdHandler : IQueryHandler<GetUserByIdQuery, UserDto
 
     public async Task<UserDto?> Handle(GetUserByIdQuery query, CancellationToken ct)
     {
-        var user = await _users.GetByIdAsync(query.Id, ct);
+        var user = await _users.GetByIdAsync(TenantId.Create(query.TenantId), query.Id, ct);
         return user is null ? null : new UserDto(user.Id, user.TenantId.Value, user.Username.Value, user.FirstName, user.LastName, user.Email.Value, user.Role.ToString(), user.IsActive, user.IntegrationStatus, user.IntegrationError);
     }
 }

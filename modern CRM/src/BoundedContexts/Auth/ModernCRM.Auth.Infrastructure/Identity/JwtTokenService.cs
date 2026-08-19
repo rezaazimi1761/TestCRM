@@ -5,6 +5,7 @@ using System.Text;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using ModernCRM.Auth.Domain.Users;
+using ModernCRM.Auth.Application.Handlers;
 
 namespace ModernCRM.Auth.Infrastructure.Identity;
 

@@ -16,5 +16,5 @@ public interface ITenantRepository
     Task<Tenant?> GetByIdAsync(int id, CancellationToken ct);
     Task<Tenant?> GetByTenantIdAsync(TenantId tenantId, CancellationToken ct);
     Task<IReadOnlyList<Tenant>> ListAsync(CancellationToken ct);
-    Task SaveChangesAsync(CancellationToken ct);
+    IUnitOfWork UnitOfWork { get; }
 }

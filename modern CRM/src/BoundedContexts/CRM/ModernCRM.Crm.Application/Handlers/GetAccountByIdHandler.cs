@@ -19,7 +19,7 @@ public sealed class GetAccountByIdHandler : IQueryHandler<GetAccountByIdQuery, A
 
     public async Task<AccountDto?> Handle(GetAccountByIdQuery query, CancellationToken ct)
     {
-        var x = await _accounts.GetAsync(query.Id, ct);
+        var x = await _accounts.GetAsync(TenantId.Create(query.TenantId), query.Id, ct);
         return x is null || x.IsDeleted ? null : new AccountDto(x.Id, x.TenantId.Value, x.Name, x.Industry, x.Website, x.Phone, x.Address);
     }
 }

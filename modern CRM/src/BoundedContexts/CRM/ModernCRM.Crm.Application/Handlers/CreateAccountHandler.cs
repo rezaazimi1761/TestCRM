@@ -22,7 +22,7 @@ public sealed class CreateAccountHandler : ICommandHandler<CreateAccountCommand,
         var account = Account.Create(TenantId.Create(command.TenantId), command.Name, command.Industry, command.Website);
         account.ChangeProfile(command.Industry, command.Website, command.Phone, command.Address);
         await _accounts.AddAsync(account, ct);
-        await _accounts.SaveChangesAsync(ct);
+        await _accounts.UnitOfWork.SaveChangesAsync(ct);
         return account.Id;
     }
 }

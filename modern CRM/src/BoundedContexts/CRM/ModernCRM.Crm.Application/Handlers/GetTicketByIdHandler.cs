@@ -19,7 +19,7 @@ public sealed class GetTicketByIdHandler : IQueryHandler<GetTicketByIdQuery, Tic
 
     public async Task<TicketDto?> Handle(GetTicketByIdQuery query, CancellationToken ct)
     {
-        var x = await _tickets.GetAsync(query.Id, ct);
+        var x = await _tickets.GetAsync(TenantId.Create(query.TenantId), query.Id, ct);
         return x is null || x.IsDeleted ? null : new TicketDto(x.Id, x.TenantId.Value, x.Subject, x.Description, x.RequestedByAccountId, x.ContactId, x.AssignedToAuthUserId, x.Status.ToString(), x.Priority.ToString(), x.DueDate);
     }
 }

@@ -3,4 +3,4 @@ using ModernCRM.SharedKernel.Application;
 
 namespace ModernCRM.Crm.Application.Queries;
 
-public sealed record GetAccountByIdQuery(int Id) : IQuery<AccountDto?>;
+public sealed record GetAccountByIdQuery(string TenantId, int Id) : IQuery<AccountDto?>;

@@ -23,7 +23,7 @@ public sealed class CreateContactHandler : ICommandHandler<CreateContactCommand,
         contact.ChangeJobTitle(command.JobTitle);
         if (command.AccountId is > 0) contact.AssignToAccount(command.AccountId.Value);
         await _contacts.AddAsync(contact, ct);
-        await _contacts.SaveChangesAsync(ct);
+        await _contacts.UnitOfWork.SaveChangesAsync(ct);
         return contact.Id;
     }
 }

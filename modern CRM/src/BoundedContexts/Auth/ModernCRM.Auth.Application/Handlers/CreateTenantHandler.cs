@@ -19,7 +19,7 @@ public sealed class CreateTenantHandler : ICommandHandler<CreateTenantCommand, i
     {
         var tenant = Tenant.Create(TenantId.Create(command.TenantId), command.DisplayName, command.ServiceInstanceId);
         await _tenants.AddAsync(tenant, ct);
-        await _tenants.SaveChangesAsync(ct);
+        await _tenants.UnitOfWork.SaveChangesAsync(ct);
         return tenant.Id;
     }
 }

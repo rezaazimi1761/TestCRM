@@ -17,10 +17,10 @@ public sealed class DeleteUserHandler : ICommandHandler<DeleteUserCommand, bool>
 
     public async Task<bool> Handle(DeleteUserCommand command, CancellationToken ct)
     {
-        var user = await _users.GetByIdAsync(command.Id, ct);
+        var user = await _users.GetByIdAsync(TenantId.Create(command.TenantId), command.Id, ct);
         if (user is null) return false;
         user.LogicalDelete();
-        await _users.SaveChangesAsync(ct);
+        await _users.UnitOfWork.SaveChangesAsync(ct);
         return true;
     }
 }

@@ -3,17 +3,19 @@ using ModernCRM.Crm.Domain.Repositories;
 using ModernCRM.Crm.Infrastructure.Persistence;
 using ModernCRM.SharedKernel.ValueObjects;
 using Microsoft.EntityFrameworkCore;
+using ModernCRM.SharedKernel.Application;
 
 namespace ModernCRM.Crm.Infrastructure.Repositories;
 
 public sealed class OpportunityRepository : IOpportunityRepository
 {
     private readonly CrmDbContext _db;
-    public OpportunityRepository(CrmDbContext db) => _db = db;
+    public OpportunityRepository(CrmDbContext db) { _db = db; UnitOfWork = new EfUnitOfWork(db); }
+    public IUnitOfWork UnitOfWork { get; }
 
     public async Task AddAsync(Opportunity opportunity, CancellationToken ct) => await _db.Opportunities.AddAsync(opportunity, ct);
 
-    public Task<Opportunity?> GetAsync(int id, CancellationToken ct) => _db.Opportunities.FirstOrDefaultAsync(x => x.Id == id, ct);
+    public Task<Opportunity?> GetAsync(TenantId tenantId, int id, CancellationToken ct) => _db.Opportunities.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId && !x.IsDeleted, ct);
 
     public async Task<IReadOnlyList<Opportunity>> ListAsync(TenantId tenantId, string? stage, string? search, CancellationToken ct)
     {
@@ -27,7 +29,5 @@ public sealed class OpportunityRepository : IOpportunityRepository
         }
         return await query.AsNoTracking().OrderBy(x => x.ExpectedCloseDate ?? DateTime.MaxValue).ThenBy(x => x.Title).ToListAsync(ct);
     }
-
-    public Task SaveChangesAsync(CancellationToken ct) => _db.SaveChangesAsync(ct);
 
 }

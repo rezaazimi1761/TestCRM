@@ -19,7 +19,7 @@ public sealed class GetOpportunityByIdHandler : IQueryHandler<GetOpportunityById
 
     public async Task<OpportunityDto?> Handle(GetOpportunityByIdQuery query, CancellationToken ct)
     {
-        var x = await _opportunities.GetAsync(query.Id, ct);
+        var x = await _opportunities.GetAsync(TenantId.Create(query.TenantId), query.Id, ct);
         return x is null || x.IsDeleted ? null : new OpportunityDto(x.Id, x.TenantId.Value, x.Title, x.Value.Amount, x.AccountId, x.ContactId, x.Stage.ToString(), x.ExpectedCloseDate);
     }
 }

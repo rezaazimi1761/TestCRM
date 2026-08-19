@@ -1,12 +1,35 @@
-using Microsoft.AspNetCore.Mvc;using Microsoft.EntityFrameworkCore;using ModernCRM.Crm.Api.Frontend;using ModernCRM.Crm.Api.UserSync;
+using Microsoft.AspNetCore.Mvc;
+using ModernCRM.Crm.Api.Frontend;
+using ModernCRM.Crm.Application.Frontend;
+
 namespace ModernCRM.Crm.Api.Controllers;
-[ApiController,Route("api/activities")] public sealed class ActivitiesController(CrmIntegrationDbContext db):ControllerBase
+
+[ApiController, Route("api/activities")]
+public sealed class ActivitiesController(IActivityService service) : ControllerBase
 {
- [HttpGet] public async Task<IActionResult> GetAll(int page=1,int pageSize=20,string? sortBy=null,bool sortDesc=false,string? search=null,string? type=null,string? isCompleted=null,CancellationToken ct=default){var q=db.Activities.Where(x=>x.TenantId==FrontendApi.Tenant(User)&&!x.IsDeleted);if(!string.IsNullOrWhiteSpace(search))q=q.Where(x=>(x.Subject!=null&&x.Subject.Contains(search))||(x.Description!=null&&x.Description.Contains(search))||(x.ContactName!=null&&x.ContactName.Contains(search)));if(!string.IsNullOrWhiteSpace(type))q=q.Where(x=>x.Type==type);if(bool.TryParse(isCompleted,out var completed))q=q.Where(x=>x.IsCompleted==completed);return Ok(await FrontendApi.PageAsync(q,page,pageSize,sortBy,sortDesc,ct));}
- [HttpGet("{id:int}")] public async Task<IActionResult> Get(int id,CancellationToken ct)=>await Find(id,ct) is{}x?Ok(x):NotFound();
- [HttpPost] public async Task<IActionResult> Create(ActivityPayload r,CancellationToken ct){if(string.IsNullOrWhiteSpace(r.Subject))return BadRequest(new{message="Subject is required."});var x=new ActivityModel{TenantId=FrontendApi.Tenant(User),Subject=r.Subject,Type=r.Type??"Task",Description=r.Description,ContactId=r.ContactId,DueDate=r.DueDate,IsCompleted=r.IsCompleted??false};await Enrich(x,ct);db.Activities.Add(x);await db.SaveChangesAsync(ct);return CreatedAtAction(nameof(Get),new{id=x.Id},x.Id);}
- [HttpPut("{id:int}")] public async Task<IActionResult> Update(int id,ActivityPayload r,CancellationToken ct){var x=await Find(id,ct);if(x is null)return NotFound();x.Subject=r.Subject;x.Type=r.Type??x.Type;x.Description=r.Description;x.ContactId=r.ContactId;x.DueDate=r.DueDate;x.IsCompleted=r.IsCompleted??x.IsCompleted;await Enrich(x,ct);await db.SaveChangesAsync(ct);return NoContent();}
- [HttpDelete("{id:int}")] public async Task<IActionResult> Delete(int id,CancellationToken ct){var x=await Find(id,ct);if(x is null)return NotFound();x.IsDeleted=true;await db.SaveChangesAsync(ct);return NoContent();}
- private Task<ActivityModel?> Find(int id,CancellationToken ct)=>db.Activities.FirstOrDefaultAsync(x=>x.Id==id&&x.TenantId==FrontendApi.Tenant(User)&&!x.IsDeleted,ct);
- private async Task Enrich(ActivityModel x,CancellationToken ct){var c=await db.Contacts.FirstOrDefaultAsync(c=>c.Id==x.ContactId&&!c.IsDeleted,ct);x.ContactName=c is null?null:$"{c.FirstName} {c.LastName}".Trim();}
+    [HttpGet]
+    public async Task<IActionResult> GetAll(int page = 1, int pageSize = 20, string? sortBy = null, bool sortDesc = false, string? search = null, string? type = null, string? isCompleted = null, CancellationToken ct = default)
+        => Ok(await service.GetPageAsync(Tenant(), page, pageSize, sortBy, sortDesc, search, type, bool.TryParse(isCompleted, out var completed) ? completed : null, ct));
+
+    [HttpGet("{id:int}")]
+    public async Task<IActionResult> Get(int id, CancellationToken ct)
+        => await service.GetAsync(Tenant(), id, ct) is { } item ? Ok(item) : NotFound();
+
+    [HttpPost]
+    public async Task<IActionResult> Create(ActivityPayload request, CancellationToken ct)
+    {
+        var id = await service.CreateAsync(Tenant(), ToInput(request), ct);
+        return CreatedAtAction(nameof(Get), new { id }, id);
+    }
+
+    [HttpPut("{id:int}")]
+    public async Task<IActionResult> Update(int id, ActivityPayload request, CancellationToken ct)
+        => await service.UpdateAsync(Tenant(), id, ToInput(request), ct) ? NoContent() : NotFound();
+
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> Delete(int id, CancellationToken ct)
+        => await service.DeleteAsync(Tenant(), id, ct) ? NoContent() : NotFound();
+
+    private string Tenant() => FrontendApi.Tenant(User);
+    private static ActivityInput ToInput(ActivityPayload request) => new(request.Subject, request.Type, request.Description, request.DueDate, request.IsCompleted, request.ContactId);
 }

@@ -23,7 +23,10 @@ public static class AuthDataSeeder
         }
         if (!await db.Users.AnyAsync(ct))
         {
-            var user = AuthUser.Register(TenantId.Create(tenantSlug), Username.Create(configuration["Seed:AdminUsername"] ?? "admin"), Email.Create(configuration["Seed:AdminEmail"] ?? "admin@local"), configuration["Seed:AdminFirstName"] ?? "Master", configuration["Seed:AdminLastName"] ?? "Admin", PasswordHash.FromHash(hasher.Hash(configuration["Seed:AdminPassword"] ?? "Admin@123")), Role.SuperUser);
+            var adminPassword = configuration["Seed:AdminPassword"];
+            if (string.IsNullOrWhiteSpace(adminPassword))
+                throw new InvalidOperationException("Seed:AdminPassword must be provided through a secure configuration source before the initial seed.");
+            var user = AuthUser.Register(TenantId.Create(tenantSlug), Username.Create(configuration["Seed:AdminUsername"] ?? "admin"), Email.Create(configuration["Seed:AdminEmail"] ?? "admin@local"), configuration["Seed:AdminFirstName"] ?? "Master", configuration["Seed:AdminLastName"] ?? "Admin", PasswordHash.FromHash(hasher.Hash(adminPassword)), Role.SuperUser);
             await db.Users.AddAsync(user, ct);
         }
         await db.SaveChangesAsync(ct);

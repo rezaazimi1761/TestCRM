@@ -1,5 +1,6 @@
 using MassTransit;
 using ModernCRM.SharedKernel.IntegrationEvents;
+using ModernCRM.Crm.Infrastructure.Integration;
 
 namespace ModernCRM.Crm.Api.UserSync;
 

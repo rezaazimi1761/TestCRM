@@ -3,4 +3,4 @@ using ModernCRM.SharedKernel.Application;
 
 namespace ModernCRM.Crm.Application.Queries;
 
-public sealed record GetOpportunityByIdQuery(int Id) : IQuery<OpportunityDto?>;
+public sealed record GetOpportunityByIdQuery(string TenantId, int Id) : IQuery<OpportunityDto?>;

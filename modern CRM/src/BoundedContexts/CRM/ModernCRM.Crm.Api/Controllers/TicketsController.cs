@@ -1,12 +1,37 @@
-using Microsoft.AspNetCore.Mvc;using Microsoft.EntityFrameworkCore;using ModernCRM.Crm.Api.Frontend;using ModernCRM.Crm.Api.UserSync;
+using Microsoft.AspNetCore.Mvc;
+using ModernCRM.Crm.Api.Frontend;
+using ModernCRM.Crm.Application.Commands;
+using ModernCRM.Crm.Application.Handlers;
+using ModernCRM.Crm.Application.Queries;
+
 namespace ModernCRM.Crm.Api.Controllers;
-[ApiController,Route("api/tickets")] public sealed class TicketsController(CrmIntegrationDbContext db):ControllerBase
+
+[ApiController, Route("api/tickets")]
+public sealed class TicketsController(CreateTicketHandler create, UpdateTicketHandler update, DeleteTicketHandler delete, GetTicketsHandler list, GetTicketByIdHandler get) : ControllerBase
 {
- [HttpGet] public async Task<IActionResult> GetAll(int page=1,int pageSize=20,string? sortBy=null,bool sortDesc=false,string? search=null,string? status=null,string? priority=null,CancellationToken ct=default){var q=db.Tickets.Where(x=>x.TenantId==FrontendApi.Tenant(User)&&!x.IsDeleted);if(!string.IsNullOrWhiteSpace(search))q=q.Where(x=>x.Subject.Contains(search)||(x.Description!=null&&x.Description.Contains(search))||(x.AccountName!=null&&x.AccountName.Contains(search)));if(!string.IsNullOrWhiteSpace(status))q=q.Where(x=>x.Status==status);if(!string.IsNullOrWhiteSpace(priority))q=q.Where(x=>x.Priority==priority);return Ok(await FrontendApi.PageAsync(q,page,pageSize,sortBy,sortDesc,ct));}
- [HttpGet("{id:int}")] public async Task<IActionResult> Get(int id,CancellationToken ct)=>await Find(id,ct) is{}x?Ok(x):NotFound();
- [HttpPost] public async Task<IActionResult> Create(TicketPayload r,CancellationToken ct){if(string.IsNullOrWhiteSpace(r.Subject))return BadRequest(new{message="Subject is required."});var x=new TicketModel{TenantId=FrontendApi.Tenant(User),Subject=r.Subject,Description=r.Description,Status=r.Status??"New",Priority=r.Priority??"Medium",AccountId=r.AccountId,ContactId=r.ContactId,AssignedToUserId=r.AssignedToUserId,DueDate=r.DueDate,ResolvedAt=r.ResolvedAt,Category=r.Category,Notes=r.Notes};await Enrich(x,ct);db.Tickets.Add(x);await db.SaveChangesAsync(ct);return CreatedAtAction(nameof(Get),new{id=x.Id},x.Id);}
- [HttpPut("{id:int}")] public async Task<IActionResult> Update(int id,TicketPayload r,CancellationToken ct){var x=await Find(id,ct);if(x is null)return NotFound();x.Subject=r.Subject??x.Subject;x.Description=r.Description;x.Status=r.Status??x.Status;x.Priority=r.Priority??x.Priority;x.AccountId=r.AccountId;x.ContactId=r.ContactId;x.AssignedToUserId=r.AssignedToUserId;x.DueDate=r.DueDate;x.ResolvedAt=r.ResolvedAt;x.Category=r.Category;x.Notes=r.Notes;await Enrich(x,ct);await db.SaveChangesAsync(ct);return NoContent();}
- [HttpDelete("{id:int}")] public async Task<IActionResult> Delete(int id,CancellationToken ct){var x=await Find(id,ct);if(x is null)return NotFound();x.IsDeleted=true;await db.SaveChangesAsync(ct);return NoContent();}
- private Task<TicketModel?> Find(int id,CancellationToken ct)=>db.Tickets.FirstOrDefaultAsync(x=>x.Id==id&&x.TenantId==FrontendApi.Tenant(User)&&!x.IsDeleted,ct);
- private async Task Enrich(TicketModel x,CancellationToken ct)=>x.AccountName=await db.Accounts.Where(a=>a.Id==x.AccountId&&!a.IsDeleted).Select(a=>a.Name).FirstOrDefaultAsync(ct);
+    [HttpGet]
+    public async Task<IActionResult> GetAll(int page = 1, int pageSize = 20, string? sortBy = null, bool sortDesc = false, string? search = null, string? status = null, string? priority = null, CancellationToken ct = default)
+        => Ok(FrontendApi.Page(await list.Handle(new GetTicketsQuery(Tenant(), status, priority), ct), page, pageSize, sortBy, sortDesc));
+
+    [HttpGet("{id:int}")]
+    public async Task<IActionResult> Get(int id, CancellationToken ct)
+        => await get.Handle(new GetTicketByIdQuery(Tenant(), id), ct) is { } item ? Ok(item) : NotFound();
+
+    [HttpPost]
+    public async Task<IActionResult> Create(TicketPayload request, CancellationToken ct)
+    {
+        if (request.AccountId is not > 0) return BadRequest(new { message = "Account is required." });
+        var id = await create.Handle(new CreateTicketCommand(Tenant(), request.Subject ?? "", request.AccountId.Value, request.Priority ?? "Medium", request.DueDate, request.Description, request.ContactId, request.AssignedToUserId), ct);
+        return CreatedAtAction(nameof(Get), new { id }, id);
+    }
+
+    [HttpPut("{id:int}")]
+    public async Task<IActionResult> Update(int id, TicketPayload request, CancellationToken ct)
+        => await update.Handle(new UpdateTicketCommand(Tenant(), id, request.Subject ?? "", request.Priority ?? "Medium", request.Status ?? "New", request.DueDate, request.Description, request.ContactId, request.AssignedToUserId), ct) ? NoContent() : NotFound();
+
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> Delete(int id, CancellationToken ct)
+        => await delete.Handle(new DeleteTicketCommand(Tenant(), id), ct) ? NoContent() : NotFound();
+
+    private string Tenant() => FrontendApi.Tenant(User);
 }

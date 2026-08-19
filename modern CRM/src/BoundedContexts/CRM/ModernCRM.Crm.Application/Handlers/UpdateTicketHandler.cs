@@ -19,7 +19,7 @@ public sealed class UpdateTicketHandler : ICommandHandler<UpdateTicketCommand, b
 
     public async Task<bool> Handle(UpdateTicketCommand command, CancellationToken ct)
     {
-        var ticket = await _tickets.GetAsync(command.Id, ct);
+        var ticket = await _tickets.GetAsync(TenantId.Create(command.TenantId), command.Id, ct);
         if (ticket is null) return false;
 
         ticket.ChangeSubject(command.Subject);
@@ -36,7 +36,7 @@ public sealed class UpdateTicketHandler : ICommandHandler<UpdateTicketCommand, b
             else if (status == TicketStatus.Removed) ticket.Remove();
         }
 
-        await _tickets.SaveChangesAsync(ct);
+        await _tickets.UnitOfWork.SaveChangesAsync(ct);
         return true;
     }
 }

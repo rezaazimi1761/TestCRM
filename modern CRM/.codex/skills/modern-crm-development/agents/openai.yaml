@@ -1,0 +1,4 @@
+interface:
+  display_name: "Modern CRM Development"
+  short_description: "Develop and maintain the ModernCRM solution"
+  default_prompt: "Use $modern-crm-development to implement a feature while preserving the project architecture."

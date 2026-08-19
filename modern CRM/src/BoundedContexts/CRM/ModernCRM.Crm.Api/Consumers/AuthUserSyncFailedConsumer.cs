@@ -1,20 +1,20 @@
 using MassTransit;
-using Microsoft.EntityFrameworkCore;
 using ModernCRM.SharedKernel.IntegrationEvents;
 
 using ModernCRM.Crm.Api.UserSync;
+using ModernCRM.Crm.Application.Frontend;
 
 namespace ModernCRM.Crm.Api.Consumers;
 
-public sealed class AuthUserSyncFailedConsumer(CrmIntegrationDbContext db) : IConsumer<AuthUserSyncFailed>
+public sealed class AuthUserSyncFailedConsumer(ICrmFrontendRepository persistence) : IConsumer<AuthUserSyncFailed>
 {
     public async Task Consume(ConsumeContext<AuthUserSyncFailed> context)
     {
-        var user = await db.Users.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Id == context.Message.CrmUserId, context.CancellationToken);
+        var user = await persistence.FindUserForSyncAsync(context.Message.CrmUserId, context.CancellationToken);
         if (user is null) return;
         user.SyncStatus = "Failed";
         user.SyncError = context.Message.Error;
         user.UpdatedAt = DateTime.UtcNow;
-        await db.SaveChangesAsync(context.CancellationToken);
+        await persistence.UnitOfWork.SaveChangesAsync(context.CancellationToken);
     }
 }

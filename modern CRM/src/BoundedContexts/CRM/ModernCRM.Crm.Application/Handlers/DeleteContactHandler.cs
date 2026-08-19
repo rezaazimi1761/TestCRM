@@ -19,10 +19,10 @@ public sealed class DeleteContactHandler : ICommandHandler<DeleteContactCommand,
 
     public async Task<bool> Handle(DeleteContactCommand command, CancellationToken ct)
     {
-        var contact = await _contacts.GetAsync(command.Id, ct);
+        var contact = await _contacts.GetAsync(TenantId.Create(command.TenantId), command.Id, ct);
         if (contact is null) return false;
         contact.Delete();
-        await _contacts.SaveChangesAsync(ct);
+        await _contacts.UnitOfWork.SaveChangesAsync(ct);
         return true;
     }
 }

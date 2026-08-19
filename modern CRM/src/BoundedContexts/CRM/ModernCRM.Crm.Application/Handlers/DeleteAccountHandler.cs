@@ -19,10 +19,10 @@ public sealed class DeleteAccountHandler : ICommandHandler<DeleteAccountCommand,
 
     public async Task<bool> Handle(DeleteAccountCommand command, CancellationToken ct)
     {
-        var account = await _accounts.GetAsync(command.Id, ct);
+        var account = await _accounts.GetAsync(TenantId.Create(command.TenantId), command.Id, ct);
         if (account is null) return false;
         account.Delete();
-        await _accounts.SaveChangesAsync(ct);
+        await _accounts.UnitOfWork.SaveChangesAsync(ct);
         return true;
     }
 }

@@ -1,11 +1,36 @@
-using Microsoft.AspNetCore.Mvc; using Microsoft.EntityFrameworkCore; using ModernCRM.Crm.Api.Frontend; using ModernCRM.Crm.Api.UserSync;
+using Microsoft.AspNetCore.Mvc;
+using ModernCRM.Crm.Api.Frontend;
+using ModernCRM.Crm.Application.Commands;
+using ModernCRM.Crm.Application.Handlers;
+using ModernCRM.Crm.Application.Queries;
+
 namespace ModernCRM.Crm.Api.Controllers;
-[ApiController,Route("api/contacts")] public sealed class ContactsController(CrmIntegrationDbContext db):ControllerBase
+
+[ApiController, Route("api/contacts")]
+public sealed class ContactsController(CreateContactHandler create, UpdateContactHandler update, DeleteContactHandler delete, GetContactsHandler list, GetContactByIdHandler get) : ControllerBase
 {
- [HttpGet] public async Task<IActionResult> GetAll(int page=1,int pageSize=20,string? sortBy=null,bool sortDesc=false,string? search=null,CancellationToken ct=default){var q=db.Contacts.Where(x=>x.TenantId==FrontendApi.Tenant(User)&&!x.IsDeleted);if(!string.IsNullOrWhiteSpace(search))q=q.Where(x=>(x.FirstName!=null&&x.FirstName.Contains(search))||(x.LastName!=null&&x.LastName.Contains(search))||(x.Email!=null&&x.Email.Contains(search))||(x.Company!=null&&x.Company.Contains(search)));return Ok(await FrontendApi.PageAsync(q,page,pageSize,sortBy,sortDesc,ct));}
- [HttpGet("{id:int}")] public async Task<IActionResult> Get(int id,CancellationToken ct)=>await Find(id,ct) is{}x?Ok(x):NotFound();
- [HttpPost] public async Task<IActionResult> Create(ContactPayload r,CancellationToken ct){if(string.IsNullOrWhiteSpace(r.FirstName)||string.IsNullOrWhiteSpace(r.LastName)||string.IsNullOrWhiteSpace(r.Email))return BadRequest(new{message="First name, last name and email are required."});var x=new ContactModel{TenantId=FrontendApi.Tenant(User),FirstName=r.FirstName,LastName=r.LastName,Email=r.Email,Phone=r.Phone,Company=r.Company,JobTitle=r.JobTitle,Notes=r.Notes,AccountId=r.AccountId};db.Contacts.Add(x);await db.SaveChangesAsync(ct);return CreatedAtAction(nameof(Get),new{id=x.Id},x.Id);}
- [HttpPut("{id:int}")] public async Task<IActionResult> Update(int id,ContactPayload r,CancellationToken ct){var x=await Find(id,ct);if(x is null)return NotFound();x.FirstName=r.FirstName;x.LastName=r.LastName;x.Email=r.Email;x.Phone=r.Phone;x.Company=r.Company;x.JobTitle=r.JobTitle;x.Notes=r.Notes;x.AccountId=r.AccountId;await db.SaveChangesAsync(ct);return NoContent();}
- [HttpDelete("{id:int}")] public async Task<IActionResult> Delete(int id,CancellationToken ct){var x=await Find(id,ct);if(x is null)return NotFound();x.IsDeleted=true;await db.SaveChangesAsync(ct);return NoContent();}
- private Task<ContactModel?> Find(int id,CancellationToken ct)=>db.Contacts.FirstOrDefaultAsync(x=>x.Id==id&&x.TenantId==FrontendApi.Tenant(User)&&!x.IsDeleted,ct);
+    [HttpGet]
+    public async Task<IActionResult> GetAll(int page = 1, int pageSize = 20, string? sortBy = null, bool sortDesc = false, string? search = null, CancellationToken ct = default)
+        => Ok(FrontendApi.Page(await list.Handle(new GetContactsQuery(Tenant(), search), ct), page, pageSize, sortBy, sortDesc));
+
+    [HttpGet("{id:int}")]
+    public async Task<IActionResult> Get(int id, CancellationToken ct)
+        => await get.Handle(new GetContactByIdQuery(Tenant(), id), ct) is { } item ? Ok(item) : NotFound();
+
+    [HttpPost]
+    public async Task<IActionResult> Create(ContactPayload request, CancellationToken ct)
+    {
+        var id = await create.Handle(new CreateContactCommand(Tenant(), request.FirstName ?? "", request.LastName ?? "", request.Email ?? "", request.Phone, request.JobTitle, request.AccountId), ct);
+        return CreatedAtAction(nameof(Get), new { id }, id);
+    }
+
+    [HttpPut("{id:int}")]
+    public async Task<IActionResult> Update(int id, ContactPayload request, CancellationToken ct)
+        => await update.Handle(new UpdateContactCommand(Tenant(), id, request.FirstName ?? "", request.LastName ?? "", request.Email ?? "", request.Phone, request.JobTitle, request.AccountId), ct) ? NoContent() : NotFound();
+
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> Delete(int id, CancellationToken ct)
+        => await delete.Handle(new DeleteContactCommand(Tenant(), id), ct) ? NoContent() : NotFound();
+
+    private string Tenant() => FrontendApi.Tenant(User);
 }

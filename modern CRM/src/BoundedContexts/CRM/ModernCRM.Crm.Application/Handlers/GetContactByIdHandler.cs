@@ -19,7 +19,7 @@ public sealed class GetContactByIdHandler : IQueryHandler<GetContactByIdQuery, C
 
     public async Task<ContactDto?> Handle(GetContactByIdQuery query, CancellationToken ct)
     {
-        var x = await _contacts.GetAsync(query.Id, ct);
+        var x = await _contacts.GetAsync(TenantId.Create(query.TenantId), query.Id, ct);
         return x is null || x.IsDeleted ? null : new ContactDto(x.Id, x.TenantId.Value, x.FirstName, x.LastName, x.Email.Value, x.Phone, x.JobTitle, x.AccountId);
     }
 }

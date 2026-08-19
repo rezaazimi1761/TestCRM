@@ -20,6 +20,7 @@ public sealed class AuthUser : AggregateRoot<int>
     public bool IsDeleted { get; private set; }
     public string IntegrationStatus { get; private set; } = "Pending";
     public string? IntegrationError { get; private set; }
+    public DateTime CreatedAtUtc { get; private set; }
     public IReadOnlyCollection<UserClaim> Claims => _claims.AsReadOnly();
 
     private AuthUser() { }
@@ -27,9 +28,18 @@ public sealed class AuthUser : AggregateRoot<int>
     public static AuthUser Register(TenantId tenantId, Username username, Email email, string firstName, string lastName, PasswordHash passwordHash, Role role)
     {
         Guard.Against(role == Role.SuperUser && tenantId.Value != "default", "SuperUser must be created in the home/default tenant.");
-        var user = new AuthUser { TenantId = tenantId, Username = username, Email = email, PasswordHash = passwordHash, Role = role, IsActive = true };
+        var user = new AuthUser { TenantId = tenantId, Username = username, Email = email, PasswordHash = passwordHash, Role = role, IsActive = true, CreatedAtUtc = DateTime.UtcNow };
         user.ChangeName(firstName, lastName);
         user.Raise(new AuthUserCreatedDomainEvent(user.Id, tenantId.Value, username.Value));
+        return user;
+    }
+
+    public static AuthUser Rehydrate(int id, TenantId tenantId, Username username, Email email, string firstName, string lastName, PasswordHash passwordHash, Role role, bool isActive, DateTime createdAtUtc)
+    {
+        Guard.Against(id <= 0, "User id is invalid.");
+        var user = new AuthUser { Id = id, TenantId = tenantId, Username = username, Email = email, PasswordHash = passwordHash, Role = role, IsActive = isActive, CreatedAtUtc = createdAtUtc };
+        user.ChangeName(firstName, lastName);
+        user.ClearDomainEvents();
         return user;
     }
 

@@ -19,10 +19,10 @@ public sealed class DeleteTicketHandler : ICommandHandler<DeleteTicketCommand, b
 
     public async Task<bool> Handle(DeleteTicketCommand command, CancellationToken ct)
     {
-        var ticket = await _tickets.GetAsync(command.Id, ct);
+        var ticket = await _tickets.GetAsync(TenantId.Create(command.TenantId), command.Id, ct);
         if (ticket is null) return false;
         ticket.Remove();
-        await _tickets.SaveChangesAsync(ct);
+        await _tickets.UnitOfWork.SaveChangesAsync(ct);
         return true;
     }
 }

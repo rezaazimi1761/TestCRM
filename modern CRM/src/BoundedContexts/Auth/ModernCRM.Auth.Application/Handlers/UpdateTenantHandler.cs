@@ -22,7 +22,7 @@ public sealed class UpdateTenantHandler : ICommandHandler<UpdateTenantCommand, b
         tenant.Rename(command.DisplayName);
         tenant.MoveToServiceInstance(command.ServiceInstanceId);
         if (command.IsActive) tenant.Activate(); else tenant.Deactivate();
-        await _tenants.SaveChangesAsync(ct);
+        await _tenants.UnitOfWork.SaveChangesAsync(ct);
         return true;
     }
 }

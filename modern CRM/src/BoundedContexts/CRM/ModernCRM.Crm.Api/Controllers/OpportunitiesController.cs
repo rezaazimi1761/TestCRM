@@ -1,12 +1,36 @@
-using Microsoft.AspNetCore.Mvc;using Microsoft.EntityFrameworkCore;using ModernCRM.Crm.Api.Frontend;using ModernCRM.Crm.Api.UserSync;
+using Microsoft.AspNetCore.Mvc;
+using ModernCRM.Crm.Api.Frontend;
+using ModernCRM.Crm.Application.Commands;
+using ModernCRM.Crm.Application.Handlers;
+using ModernCRM.Crm.Application.Queries;
+
 namespace ModernCRM.Crm.Api.Controllers;
-[ApiController,Route("api/opportunities")] public sealed class OpportunitiesController(CrmIntegrationDbContext db):ControllerBase
+
+[ApiController, Route("api/opportunities")]
+public sealed class OpportunitiesController(CreateOpportunityHandler create, UpdateOpportunityHandler update, DeleteOpportunityHandler delete, GetOpportunitiesHandler list, GetOpportunityByIdHandler get) : ControllerBase
 {
- [HttpGet] public async Task<IActionResult> GetAll(int page=1,int pageSize=20,string? sortBy=null,bool sortDesc=false,string? search=null,string? stage=null,CancellationToken ct=default){var q=db.Opportunities.Where(x=>x.TenantId==FrontendApi.Tenant(User)&&!x.IsDeleted);if(!string.IsNullOrWhiteSpace(search))q=q.Where(x=>(x.Title!=null&&x.Title.Contains(search))||(x.AccountName!=null&&x.AccountName.Contains(search)));if(!string.IsNullOrWhiteSpace(stage))q=q.Where(x=>x.Stage==stage);return Ok(await FrontendApi.PageAsync(q,page,pageSize,sortBy,sortDesc,ct));}
- [HttpGet("{id:int}")] public async Task<IActionResult> Get(int id,CancellationToken ct)=>await Find(id,ct) is{}x?Ok(x):NotFound();
- [HttpPost] public async Task<IActionResult> Create(OpportunityPayload r,CancellationToken ct){if(string.IsNullOrWhiteSpace(r.Title))return BadRequest(new{message="Title is required."});var x=new OpportunityModel{TenantId=FrontendApi.Tenant(User),Title=r.Title,Value=r.Value,Stage=r.Stage??"Prospecting",AccountId=r.AccountId,ContactId=r.ContactId,AssignedToUserId=r.AssignedToUserId,ExpectedCloseDate=r.ExpectedCloseDate,Notes=r.Notes};await Enrich(x,ct);db.Opportunities.Add(x);await db.SaveChangesAsync(ct);return CreatedAtAction(nameof(Get),new{id=x.Id},x.Id);}
- [HttpPut("{id:int}")] public async Task<IActionResult> Update(int id,OpportunityPayload r,CancellationToken ct){var x=await Find(id,ct);if(x is null)return NotFound();x.Title=r.Title;x.Value=r.Value;x.Stage=r.Stage??x.Stage;x.AccountId=r.AccountId;x.ContactId=r.ContactId;x.AssignedToUserId=r.AssignedToUserId;x.ExpectedCloseDate=r.ExpectedCloseDate;x.Notes=r.Notes;await Enrich(x,ct);await db.SaveChangesAsync(ct);return NoContent();}
- [HttpDelete("{id:int}")] public async Task<IActionResult> Delete(int id,CancellationToken ct){var x=await Find(id,ct);if(x is null)return NotFound();x.IsDeleted=true;await db.SaveChangesAsync(ct);return NoContent();}
- private Task<OpportunityModel?> Find(int id,CancellationToken ct)=>db.Opportunities.FirstOrDefaultAsync(x=>x.Id==id&&x.TenantId==FrontendApi.Tenant(User)&&!x.IsDeleted,ct);
- private async Task Enrich(OpportunityModel x,CancellationToken ct){x.AccountName=await db.Accounts.Where(a=>a.Id==x.AccountId&&!a.IsDeleted).Select(a=>a.Name).FirstOrDefaultAsync(ct);var c=await db.Contacts.FirstOrDefaultAsync(c=>c.Id==x.ContactId&&!c.IsDeleted,ct);x.ContactName=c is null?null:$"{c.FirstName} {c.LastName}".Trim();}
+    [HttpGet]
+    public async Task<IActionResult> GetAll(int page = 1, int pageSize = 20, string? sortBy = null, bool sortDesc = false, string? search = null, string? stage = null, CancellationToken ct = default)
+        => Ok(FrontendApi.Page(await list.Handle(new GetOpportunitiesQuery(Tenant(), stage, search), ct), page, pageSize, sortBy, sortDesc));
+
+    [HttpGet("{id:int}")]
+    public async Task<IActionResult> Get(int id, CancellationToken ct)
+        => await get.Handle(new GetOpportunityByIdQuery(Tenant(), id), ct) is { } item ? Ok(item) : NotFound();
+
+    [HttpPost]
+    public async Task<IActionResult> Create(OpportunityPayload request, CancellationToken ct)
+    {
+        var id = await create.Handle(new CreateOpportunityCommand(Tenant(), request.Title ?? "", request.Value, request.AccountId, request.ContactId, request.Stage ?? "Prospecting", request.ExpectedCloseDate), ct);
+        return CreatedAtAction(nameof(Get), new { id }, id);
+    }
+
+    [HttpPut("{id:int}")]
+    public async Task<IActionResult> Update(int id, OpportunityPayload request, CancellationToken ct)
+        => await update.Handle(new UpdateOpportunityCommand(Tenant(), id, request.Title ?? "", request.Value, request.ContactId, request.Stage ?? "Prospecting", request.ExpectedCloseDate), ct) ? NoContent() : NotFound();
+
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> Delete(int id, CancellationToken ct)
+        => await delete.Handle(new DeleteOpportunityCommand(Tenant(), id), ct) ? NoContent() : NotFound();
+
+    private string Tenant() => FrontendApi.Tenant(User);
 }

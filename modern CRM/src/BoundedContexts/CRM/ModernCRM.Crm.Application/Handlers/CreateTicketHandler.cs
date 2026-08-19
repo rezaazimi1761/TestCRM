@@ -25,7 +25,7 @@ public sealed class CreateTicketHandler : ICommandHandler<CreateTicketCommand, i
         if (command.ContactId is > 0) ticket.LinkContact(command.ContactId.Value);
         if (command.AssignedToAuthUserId is > 0) ticket.AssignToUser(command.AssignedToAuthUserId.Value);
         await _tickets.AddAsync(ticket, ct);
-        await _tickets.SaveChangesAsync(ct);
+        await _tickets.UnitOfWork.SaveChangesAsync(ct);
         return ticket.Id;
     }
 }

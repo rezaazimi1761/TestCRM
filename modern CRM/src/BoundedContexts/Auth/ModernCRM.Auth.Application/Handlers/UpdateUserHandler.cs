@@ -18,7 +18,7 @@ public sealed class UpdateUserHandler : ICommandHandler<UpdateUserCommand, bool>
 
     public async Task<bool> Handle(UpdateUserCommand command, CancellationToken ct)
     {
-        var user = await _users.GetByIdAsync(command.Id, ct);
+        var user = await _users.GetByIdAsync(TenantId.Create(command.TenantId), command.Id, ct);
         if (user is null) return false;
 
         user.ChangeName(command.FirstName, command.LastName);
@@ -26,7 +26,7 @@ public sealed class UpdateUserHandler : ICommandHandler<UpdateUserCommand, bool>
         user.ChangeRole(Guard.ValidEnum<Role>(command.Role, nameof(command.Role)), command.ActorIsSuperUser);
         if (command.IsActive) user.Activate(); else user.Deactivate();
 
-        await _users.SaveChangesAsync(ct);
+        await _users.UnitOfWork.SaveChangesAsync(ct);
         return true;
     }
 }
