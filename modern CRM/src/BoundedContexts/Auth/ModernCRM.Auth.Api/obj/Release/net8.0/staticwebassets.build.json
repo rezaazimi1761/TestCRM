@@ -1,0 +1,11 @@
+{
+  "Version": 1,
+  "Hash": "C/p1BlqplZj0ihTZXXmf7FTelV/BI5nCVDTP5mavNVI=",
+  "Source": "ModernCRM.Auth.Api",
+  "BasePath": "_content/ModernCRM.Auth.Api",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": []
+}

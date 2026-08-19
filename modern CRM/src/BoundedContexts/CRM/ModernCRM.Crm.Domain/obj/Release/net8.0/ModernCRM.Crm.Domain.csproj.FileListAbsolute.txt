@@ -1,0 +1,16 @@
+C:\Users\13991656\source\repos\TestCRM\modern CRM\src\BoundedContexts\CRM\ModernCRM.Crm.Domain\bin\Release\net8.0\ModernCRM.Crm.Domain.deps.json
+C:\Users\13991656\source\repos\TestCRM\modern CRM\src\BoundedContexts\CRM\ModernCRM.Crm.Domain\bin\Release\net8.0\ModernCRM.Crm.Domain.dll
+C:\Users\13991656\source\repos\TestCRM\modern CRM\src\BoundedContexts\CRM\ModernCRM.Crm.Domain\bin\Release\net8.0\ModernCRM.Crm.Domain.pdb
+C:\Users\13991656\source\repos\TestCRM\modern CRM\src\BoundedContexts\CRM\ModernCRM.Crm.Domain\bin\Release\net8.0\ModernCRM.SharedKernel.dll
+C:\Users\13991656\source\repos\TestCRM\modern CRM\src\BoundedContexts\CRM\ModernCRM.Crm.Domain\bin\Release\net8.0\ModernCRM.SharedKernel.pdb
+C:\Users\13991656\source\repos\TestCRM\modern CRM\src\BoundedContexts\CRM\ModernCRM.Crm.Domain\obj\Release\net8.0\ModernCRM.Crm.Domain.csproj.AssemblyReference.cache
+C:\Users\13991656\source\repos\TestCRM\modern CRM\src\BoundedContexts\CRM\ModernCRM.Crm.Domain\obj\Release\net8.0\ModernCRM.Crm.Domain.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\13991656\source\repos\TestCRM\modern CRM\src\BoundedContexts\CRM\ModernCRM.Crm.Domain\obj\Release\net8.0\ModernCRM.Crm.Domain.AssemblyInfoInputs.cache
+C:\Users\13991656\source\repos\TestCRM\modern CRM\src\BoundedContexts\CRM\ModernCRM.Crm.Domain\obj\Release\net8.0\ModernCRM.Crm.Domain.AssemblyInfo.cs
+C:\Users\13991656\source\repos\TestCRM\modern CRM\src\BoundedContexts\CRM\ModernCRM.Crm.Domain\obj\Release\net8.0\ModernCRM.Crm.Domain.csproj.CoreCompileInputs.cache
+C:\Users\13991656\source\repos\TestCRM\modern CRM\src\BoundedContexts\CRM\ModernCRM.Crm.Domain\obj\Release\net8.0\ModernCRM.Crm.Domain.sourcelink.json
+C:\Users\13991656\source\repos\TestCRM\modern CRM\src\BoundedContexts\CRM\ModernCRM.Crm.Domain\obj\Release\net8.0\ModernCR.6CBC957C.Up2Date
+C:\Users\13991656\source\repos\TestCRM\modern CRM\src\BoundedContexts\CRM\ModernCRM.Crm.Domain\obj\Release\net8.0\ModernCRM.Crm.Domain.dll
+C:\Users\13991656\source\repos\TestCRM\modern CRM\src\BoundedContexts\CRM\ModernCRM.Crm.Domain\obj\Release\net8.0\refint\ModernCRM.Crm.Domain.dll
+C:\Users\13991656\source\repos\TestCRM\modern CRM\src\BoundedContexts\CRM\ModernCRM.Crm.Domain\obj\Release\net8.0\ModernCRM.Crm.Domain.pdb
+C:\Users\13991656\source\repos\TestCRM\modern CRM\src\BoundedContexts\CRM\ModernCRM.Crm.Domain\obj\Release\net8.0\ref\ModernCRM.Crm.Domain.dll

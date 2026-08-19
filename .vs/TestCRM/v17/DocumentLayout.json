@@ -1,0 +1,261 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\13991656\\source\\repos\\TestCRM\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{E1E9AC53-6868-4F61-8CD1-DD45CDAEEF2A}|AuthService\\AuthService.csproj|c:\\users\\13991656\\source\\repos\\testcrm\\authservice\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E1E9AC53-6868-4F61-8CD1-DD45CDAEEF2A}|AuthService\\AuthService.csproj|solutionrelative:authservice\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E1E9AC53-6868-4F61-8CD1-DD45CDAEEF2A}|AuthService\\AuthService.csproj|c:\\users\\13991656\\source\\repos\\testcrm\\authservice\\application\\sagas\\userintegrationsagastate.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E1E9AC53-6868-4F61-8CD1-DD45CDAEEF2A}|AuthService\\AuthService.csproj|solutionrelative:authservice\\application\\sagas\\userintegrationsagastate.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{2D733795-5F1F-49E3-AA2A-29A7098C912C}|TestCRM\\TestCRM.csproj|c:\\users\\13991656\\source\\repos\\testcrm\\testcrm\\application\\consumers\\userintegrationconsumer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{2D733795-5F1F-49E3-AA2A-29A7098C912C}|TestCRM\\TestCRM.csproj|solutionrelative:testcrm\\application\\consumers\\userintegrationconsumer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{2D733795-5F1F-49E3-AA2A-29A7098C912C}|TestCRM\\TestCRM.csproj|c:\\users\\13991656\\source\\repos\\testcrm\\testcrm\\application\\common\\duplicateemailexception.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{2D733795-5F1F-49E3-AA2A-29A7098C912C}|TestCRM\\TestCRM.csproj|solutionrelative:testcrm\\application\\common\\duplicateemailexception.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{2D733795-5F1F-49E3-AA2A-29A7098C912C}|TestCRM\\TestCRM.csproj|c:\\users\\13991656\\source\\repos\\testcrm\\testcrm\\application\\features\\leads\\commands\\createleadcommand.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{2D733795-5F1F-49E3-AA2A-29A7098C912C}|TestCRM\\TestCRM.csproj|solutionrelative:testcrm\\application\\features\\leads\\commands\\createleadcommand.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{2D733795-5F1F-49E3-AA2A-29A7098C912C}|TestCRM\\TestCRM.csproj|c:\\users\\13991656\\source\\repos\\testcrm\\testcrm\\controllers\\leadscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{2D733795-5F1F-49E3-AA2A-29A7098C912C}|TestCRM\\TestCRM.csproj|solutionrelative:testcrm\\controllers\\leadscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{30D8A6E0-F841-4BE5-9FBA-3EE70D1FA205}|Shared\\Shared.csproj|c:\\users\\13991656\\source\\repos\\testcrm\\shared\\protos\\auth.proto||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{30D8A6E0-F841-4BE5-9FBA-3EE70D1FA205}|Shared\\Shared.csproj|solutionrelative:shared\\protos\\auth.proto||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{2D733795-5F1F-49E3-AA2A-29A7098C912C}|TestCRM\\TestCRM.csproj|c:\\users\\13991656\\source\\repos\\testcrm\\testcrm\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{2D733795-5F1F-49E3-AA2A-29A7098C912C}|TestCRM\\TestCRM.csproj|solutionrelative:testcrm\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E1E9AC53-6868-4F61-8CD1-DD45CDAEEF2A}|AuthService\\AuthService.csproj|c:\\users\\13991656\\source\\repos\\testcrm\\authservice\\services\\authgrpcservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E1E9AC53-6868-4F61-8CD1-DD45CDAEEF2A}|AuthService\\AuthService.csproj|solutionrelative:authservice\\services\\authgrpcservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C54743C7-2509-477D-8160-3390BDAA8E35}|CRM.Web\\CRM.Web.csproj|c:\\users\\13991656\\source\\repos\\testcrm\\crm.web\\services\\apierrorreader.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{C54743C7-2509-477D-8160-3390BDAA8E35}|CRM.Web\\CRM.Web.csproj|solutionrelative:crm.web\\services\\apierrorreader.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 20,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:131:0:{1fc202d4-d401-403c-9834-5b218574bb67}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{1c64b9c2-e352-428e-a56d-0ace190b99a6}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{3ae79031-e1bc-11d0-8f78-00a0c9110057}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:134:0:{1fc202d4-d401-403c-9834-5b218574bb67}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:135:0:{1fc202d4-d401-403c-9834-5b218574bb67}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:133:0:{1fc202d4-d401-403c-9834-5b218574bb67}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:11:0:{2456bd12-ecf7-4988-a4a6-67d49173f565}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:12:0:{2456bd12-ecf7-4988-a4a6-67d49173f565}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{65ddf8c3-8f89-4077-a6c6-dbb8853aab13}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:1:0:{65ddf8c3-8f89-4077-a6c6-dbb8853aab13}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:14:0:{2456bd12-ecf7-4988-a4a6-67d49173f565}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:15:0:{2456bd12-ecf7-4988-a4a6-67d49173f565}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{809f6ff3-8092-454a-8003-6d4091f9b5bb}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:13:0:{2456bd12-ecf7-4988-a4a6-67d49173f565}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:130:0:{13b12e3e-c1b4-4539-9371-4fe9a0d523fc}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:128:0:{13b12e3e-c1b4-4539-9371-4fe9a0d523fc}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:129:0:{13b12e3e-c1b4-4539-9371-4fe9a0d523fc}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{eefa5220-e298-11d0-8f78-00a0c9110057}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{5a4e9529-b6a0-46b5-be4f-0f0b239bc0eb}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{1c4feeaa-4718-4aa9-859d-94ce25d182ba}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "Program.cs",
+              "DocumentMoniker": "C:\\Users\\13991656\\source\\repos\\TestCRM\\AuthService\\Program.cs",
+              "RelativeDocumentMoniker": "AuthService\\Program.cs",
+              "ToolTip": "C:\\Users\\13991656\\source\\repos\\TestCRM\\AuthService\\Program.cs",
+              "RelativeToolTip": "AuthService\\Program.cs",
+              "ViewState": "AgIAAB4AAAAAAAAAAAAAAC0AAAApAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-21T07:07:40.847Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "UserIntegrationSagaState.cs",
+              "DocumentMoniker": "C:\\Users\\13991656\\source\\repos\\TestCRM\\AuthService\\Application\\Sagas\\UserIntegrationSagaState.cs",
+              "RelativeDocumentMoniker": "AuthService\\Application\\Sagas\\UserIntegrationSagaState.cs",
+              "ToolTip": "C:\\Users\\13991656\\source\\repos\\TestCRM\\AuthService\\Application\\Sagas\\UserIntegrationSagaState.cs",
+              "RelativeToolTip": "AuthService\\Application\\Sagas\\UserIntegrationSagaState.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAqwAQAAAANAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-21T06:57:58.644Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "DuplicateEmailException.cs",
+              "DocumentMoniker": "C:\\Users\\13991656\\source\\repos\\TestCRM\\TestCRM\\Application\\Common\\DuplicateEmailException.cs",
+              "RelativeDocumentMoniker": "TestCRM\\Application\\Common\\DuplicateEmailException.cs",
+              "ToolTip": "C:\\Users\\13991656\\source\\repos\\TestCRM\\TestCRM\\Application\\Common\\DuplicateEmailException.cs",
+              "RelativeToolTip": "TestCRM\\Application\\Common\\DuplicateEmailException.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-21T06:57:19.838Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "UserIntegrationConsumer.cs",
+              "DocumentMoniker": "C:\\Users\\13991656\\source\\repos\\TestCRM\\TestCRM\\Application\\Consumers\\UserIntegrationConsumer.cs",
+              "RelativeDocumentMoniker": "TestCRM\\Application\\Consumers\\UserIntegrationConsumer.cs",
+              "ToolTip": "C:\\Users\\13991656\\source\\repos\\TestCRM\\TestCRM\\Application\\Consumers\\UserIntegrationConsumer.cs",
+              "RelativeToolTip": "TestCRM\\Application\\Consumers\\UserIntegrationConsumer.cs",
+              "ViewState": "AgIAACoAAAAAAAAAAAAowAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-21T06:56:58.067Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "CreateLeadCommand.cs",
+              "DocumentMoniker": "C:\\Users\\13991656\\source\\repos\\TestCRM\\TestCRM\\Application\\Features\\Leads\\Commands\\CreateLeadCommand.cs",
+              "RelativeDocumentMoniker": "TestCRM\\Application\\Features\\Leads\\Commands\\CreateLeadCommand.cs",
+              "ToolTip": "C:\\Users\\13991656\\source\\repos\\TestCRM\\TestCRM\\Application\\Features\\Leads\\Commands\\CreateLeadCommand.cs",
+              "RelativeToolTip": "TestCRM\\Application\\Features\\Leads\\Commands\\CreateLeadCommand.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA8AAAAIAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-21T06:48:16.551Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "LeadsController.cs",
+              "DocumentMoniker": "C:\\Users\\13991656\\source\\repos\\TestCRM\\TestCRM\\Controllers\\LeadsController.cs",
+              "RelativeDocumentMoniker": "TestCRM\\Controllers\\LeadsController.cs",
+              "ToolTip": "C:\\Users\\13991656\\source\\repos\\TestCRM\\TestCRM\\Controllers\\LeadsController.cs",
+              "RelativeToolTip": "TestCRM\\Controllers\\LeadsController.cs",
+              "ViewState": "AgIAAAoAAAAAAAAAAAAAACEAAAA8AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-21T06:48:04.139Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "auth.proto",
+              "DocumentMoniker": "C:\\Users\\13991656\\source\\repos\\TestCRM\\Shared\\Protos\\auth.proto",
+              "RelativeDocumentMoniker": "Shared\\Protos\\auth.proto",
+              "ToolTip": "C:\\Users\\13991656\\source\\repos\\TestCRM\\Shared\\Protos\\auth.proto",
+              "RelativeToolTip": "Shared\\Protos\\auth.proto",
+              "ViewState": "AgIAAAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003853|",
+              "WhenOpened": "2026-06-21T06:45:29.452Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "appsettings.json",
+              "DocumentMoniker": "C:\\Users\\13991656\\source\\repos\\TestCRM\\TestCRM\\appsettings.json",
+              "RelativeDocumentMoniker": "TestCRM\\appsettings.json",
+              "ToolTip": "C:\\Users\\13991656\\source\\repos\\TestCRM\\TestCRM\\appsettings.json",
+              "RelativeToolTip": "TestCRM\\appsettings.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAEAAAAUAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2026-06-21T06:38:51.747Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
+              "Title": "AuthGrpcService.cs",
+              "DocumentMoniker": "C:\\Users\\13991656\\source\\repos\\TestCRM\\AuthService\\Services\\AuthGrpcService.cs",
+              "RelativeDocumentMoniker": "AuthService\\Services\\AuthGrpcService.cs",
+              "ToolTip": "C:\\Users\\13991656\\source\\repos\\TestCRM\\AuthService\\Services\\AuthGrpcService.cs",
+              "RelativeToolTip": "AuthService\\Services\\AuthGrpcService.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-21T06:36:30.26Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 9,
+              "Title": "ApiErrorReader.cs",
+              "DocumentMoniker": "C:\\Users\\13991656\\source\\repos\\TestCRM\\CRM.Web\\Services\\ApiErrorReader.cs",
+              "RelativeDocumentMoniker": "CRM.Web\\Services\\ApiErrorReader.cs",
+              "ToolTip": "C:\\Users\\13991656\\source\\repos\\TestCRM\\CRM.Web\\Services\\ApiErrorReader.cs",
+              "RelativeToolTip": "CRM.Web\\Services\\ApiErrorReader.cs",
+              "ViewState": "AgIAAAoAAAAAAAAAAAA1wBAAAAAiAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-21T06:34:49.176Z"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

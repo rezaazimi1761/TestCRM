@@ -1,0 +1,135 @@
+is_global = true
+build_property.TargetFramework = net8.0
+build_property.TargetPlatformMinVersion = 
+build_property.UsingMicrosoftNETSdkWeb = true
+build_property.ProjectTypeGuids = 
+build_property.InvariantGlobalization = 
+build_property.PlatformNeutralAssembly = 
+build_property.EnforceExtendedAnalyzerRules = 
+build_property._SupportedPlatformList = Linux,macOS,Windows
+build_property.RootNamespace = ModernCRM.Web
+build_property.RootNamespace = ModernCRM.Web
+build_property.ProjectDir = C:\Users\13991656\source\repos\TestCRM\modern CRM\src\Presentation\ModernCRM.Web\
+build_property.EnableComHosting = 
+build_property.EnableGeneratedComInterfaceComImportInterop = 
+build_property.RazorLangVersion = 8.0
+build_property.SupportLocalizedComponentNames = 
+build_property.GenerateRazorMetadataSourceChecksumAttributes = 
+build_property.MSBuildProjectDirectory = C:\Users\13991656\source\repos\TestCRM\modern CRM\src\Presentation\ModernCRM.Web
+build_property._RazorSourceGeneratorDebug = 
+
+[C:/Users/13991656/source/repos/TestCRM/modern CRM/src/Presentation/ModernCRM.Web/App.razor]
+build_metadata.AdditionalFiles.TargetPath = QXBwLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/13991656/source/repos/TestCRM/modern CRM/src/Presentation/ModernCRM.Web/Pages/AccountDialog.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQWNjb3VudERpYWxvZy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/13991656/source/repos/TestCRM/modern CRM/src/Presentation/ModernCRM.Web/Pages/Accounts.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQWNjb3VudHMucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/13991656/source/repos/TestCRM/modern CRM/src/Presentation/ModernCRM.Web/Pages/Activities.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQWN0aXZpdGllcy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/13991656/source/repos/TestCRM/modern CRM/src/Presentation/ModernCRM.Web/Pages/ActivityDialog.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQWN0aXZpdHlEaWFsb2cucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/13991656/source/repos/TestCRM/modern CRM/src/Presentation/ModernCRM.Web/Pages/ContactDialog.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQ29udGFjdERpYWxvZy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/13991656/source/repos/TestCRM/modern CRM/src/Presentation/ModernCRM.Web/Pages/Contacts.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQ29udGFjdHMucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/13991656/source/repos/TestCRM/modern CRM/src/Presentation/ModernCRM.Web/Pages/CreateTenantDialog.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQ3JlYXRlVGVuYW50RGlhbG9nLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/13991656/source/repos/TestCRM/modern CRM/src/Presentation/ModernCRM.Web/Pages/Dashboard.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcRGFzaGJvYXJkLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/13991656/source/repos/TestCRM/modern CRM/src/Presentation/ModernCRM.Web/Pages/Index.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcSW5kZXgucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/13991656/source/repos/TestCRM/modern CRM/src/Presentation/ModernCRM.Web/Pages/LeadDialog.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcTGVhZERpYWxvZy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/13991656/source/repos/TestCRM/modern CRM/src/Presentation/ModernCRM.Web/Pages/Leads.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcTGVhZHMucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/13991656/source/repos/TestCRM/modern CRM/src/Presentation/ModernCRM.Web/Pages/Login.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcTG9naW4ucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/13991656/source/repos/TestCRM/modern CRM/src/Presentation/ModernCRM.Web/Pages/Opportunities.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcT3Bwb3J0dW5pdGllcy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/13991656/source/repos/TestCRM/modern CRM/src/Presentation/ModernCRM.Web/Pages/OpportunityDialog.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcT3Bwb3J0dW5pdHlEaWFsb2cucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/13991656/source/repos/TestCRM/modern CRM/src/Presentation/ModernCRM.Web/Pages/ServiceInstanceDialog.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcU2VydmljZUluc3RhbmNlRGlhbG9nLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/13991656/source/repos/TestCRM/modern CRM/src/Presentation/ModernCRM.Web/Pages/ServiceInstances.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcU2VydmljZUluc3RhbmNlcy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/13991656/source/repos/TestCRM/modern CRM/src/Presentation/ModernCRM.Web/Pages/Tenants.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcVGVuYW50cy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/13991656/source/repos/TestCRM/modern CRM/src/Presentation/ModernCRM.Web/Pages/TicketDialog.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcVGlja2V0RGlhbG9nLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/13991656/source/repos/TestCRM/modern CRM/src/Presentation/ModernCRM.Web/Pages/Tickets.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcVGlja2V0cy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/13991656/source/repos/TestCRM/modern CRM/src/Presentation/ModernCRM.Web/Pages/UserDialog.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcVXNlckRpYWxvZy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/13991656/source/repos/TestCRM/modern CRM/src/Presentation/ModernCRM.Web/Pages/Users.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcVXNlcnMucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/13991656/source/repos/TestCRM/modern CRM/src/Presentation/ModernCRM.Web/Shared/EmptyLayout.razor]
+build_metadata.AdditionalFiles.TargetPath = U2hhcmVkXEVtcHR5TGF5b3V0LnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/13991656/source/repos/TestCRM/modern CRM/src/Presentation/ModernCRM.Web/Shared/MainLayout.razor]
+build_metadata.AdditionalFiles.TargetPath = U2hhcmVkXE1haW5MYXlvdXQucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/13991656/source/repos/TestCRM/modern CRM/src/Presentation/ModernCRM.Web/Shared/RedirectToLogin.razor]
+build_metadata.AdditionalFiles.TargetPath = U2hhcmVkXFJlZGlyZWN0VG9Mb2dpbi5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/13991656/source/repos/TestCRM/modern CRM/src/Presentation/ModernCRM.Web/Shared/StatCard.razor]
+build_metadata.AdditionalFiles.TargetPath = U2hhcmVkXFN0YXRDYXJkLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/13991656/source/repos/TestCRM/modern CRM/src/Presentation/ModernCRM.Web/_Imports.razor]
+build_metadata.AdditionalFiles.TargetPath = X0ltcG9ydHMucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/13991656/source/repos/TestCRM/modern CRM/src/Presentation/ModernCRM.Web/Pages/Error.cshtml]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcRXJyb3IuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/13991656/source/repos/TestCRM/modern CRM/src/Presentation/ModernCRM.Web/Pages/_Host.cshtml]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcX0hvc3QuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 

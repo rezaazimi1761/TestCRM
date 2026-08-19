@@ -1,0 +1,11 @@
+{
+  "Version": 1,
+  "Hash": "eZWkgFBNhyt1WT1hJcJpWJuxPiMWw7+PU/5zeAlHdl0=",
+  "Source": "ModernCRM.Crm.Api",
+  "BasePath": "_content/ModernCRM.Crm.Api",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": []
+}

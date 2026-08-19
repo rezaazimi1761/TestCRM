@@ -1,0 +1,3 @@
+﻿<Project>
+  <Import Project="..\buildMultiTargeting\ModernCRM.Auth.Api.props" />
+</Project>
